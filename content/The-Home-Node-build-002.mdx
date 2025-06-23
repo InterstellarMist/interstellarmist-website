@@ -29,7 +29,7 @@ March 8, 2025
   - 512 GB SSD+512 GB HDD
   - Ubuntu Server 24.04.2 LTS
 
-![[Hpserver Image.jpg|700]]
+<AutoImage src="/blog/images/Hpserver Image.jpg" width={700} alt="Hpserver Image.jpg" />
 
 I decided to use my mini PC I was using as a lightweight desktop computer as an additional homelab server since my Raspberry Pi could not handle a Nextcloud installation since it only had 2 GB ram and I was already running other services on it. This machine is probably a very good fit for a homelab server since it has a relatively new CPU with 12 logical cores and I installed 24 GB of RAM and 512 SSD, while being relatively power efficient ~25W TDP. It also supports Intel vPRO for virtualization, which makes this perfect to run a hypervisor like Proxmox. But for now, I'm just installing Ubuntu server on bare metal since I just run docker containers and have no use for multiple virtual machines.
 
@@ -37,7 +37,7 @@ I decided to use my mini PC I was using as a lightweight desktop computer as an 
 
 I have thought about just moving all my docker services onto the mini PC since it can probably handle all services I put on it. But decided not to because I liked the idea of the RPi becoming some sort of control node, where it runs my core infrastructure services like reverse proxy (Traefik), DNS sinkhole (Pi-hole), VPN (Tailscale), etc. This seemed to be a good fit because RPi is low-power so I can leave it on 24/7 and from experience this device is very reliable even after sudden reboots. This makes the mini PC some sort of a worker node, where I will run my heavier applications like my media server, private cloud storage, and other services I will try out in the future. This also makes it so I don't really need have this running 24/7 if I don't really need it. I only have to ensure the Raspberry Pi is running with minimal downtime.
 
-![[Architecture Overview build 002.png|800]]
+<AutoImage src="/blog/images/Architecture Overview build 002.png" width={800} alt="Architecture Overview build 002.png" />
 
 This shows my updated architectural diagram. Now, I am running my two servers: Raspberry Pi and Mini PC, where I put the heavier applications on the Mini PC. The RPi is going to be the "control" node as mentioned while the Mini PC is a "worker" node, more on this in a bit. I also changed my reverse proxy to Caddy because I found the configuration easier and lighter, especially for containers on other hosts. The VPN tunnel I use is still Tailscale that connects to my RPi reverse proxy and relying on public DNS (Cloudflare) to point to my RPi Tailscale IP.
 
@@ -292,7 +292,7 @@ And just like that, we now migrated our reverse proxy setup to Caddy!
 
 > [!success] Successfully obtained TLS from Let's Encrypt!!! 🎆✨🚀
 
-![[Pihole Caddy TLS Cert.png|600]]
+<AutoImage src="/blog/images/Pihole Caddy TLS Cert.png" width={600} alt="Pihole Caddy TLS Cert.png" />
 
 ### Nextcloud AIO
 
@@ -339,7 +339,7 @@ You also need to reload the Caddy docker container every time you add changes to
 
 Head on to `https://<nextcloud-machine-ip>:8080`(make sure to use the IP instead of your domain!) to access AIO mastercontainer dashboard. Make sure to save your Passphrase too! ⚠️ Go through the setup process and wait for all containers to turn green, then access your Nextcloud dashboard in your provided domain `https://nextcloud.domain.tld` using the provided username and initial password.
 
-![[Nextcloud AIO dashboard.png|810]]
+<AutoImage src="/blog/images/Nextcloud AIO dashboard.png" width={810} alt="Nextcloud AIO dashboard.png" />
 --- start-multi-column: ID_asdf
 
 ```column-settings
@@ -349,11 +349,11 @@ Border: off
 Shadow: off
 ```
 
-![[Nextcloud onboarding.png]]
+<AutoImage src="/blog/images/Nextcloud onboarding.png" width={600} alt="Nextcloud onboarding.png" />
 
 --- column-break ---
 
-![[Nextcloud Homepage.png]]
+<AutoImage src="/blog/images/Nextcloud Homepage.png" width={600} alt="Nextcloud Homepage.png" />
 
 --- end-multi-column
 Enjoy your private cloud storage and start de-googling your life! 👏👏👏
@@ -378,11 +378,11 @@ networks:
     external: true
 ```
 
-![[homepage default.png|700]]
+<AutoImage src="/blog/images/homepage default.png" width={700} alt="homepage default.png" />
 
 This is my initial custom dashboard.
 
-![[Homepage dashboard v1.png|700]]
+<AutoImage src="/blog/images/Homepage dashboard v1.png" width={700} alt="Homepage dashboard v1.png" />
 
 ### Home Assistant
 
@@ -433,14 +433,14 @@ Border: off
 Shadow: off
 ```
 
-![[home assistant onboarding.png]]
+<AutoImage src="/blog/images/home assistant onboarding.png" width={600} alt="home assistant onboarding.png" />
 
 --- column-break ---
 
-![[home asssistant login.png]]
+<AutoImage src="/blog/images/home asssistant login.png" width={600} alt="home asssistant login.png" />
 
 --- end-multi-column
-![[home assistant initial setup.png|700]]
+<AutoImage src="/blog/images/home assistant initial setup.png" width={700} alt="home assistant initial setup.png" />
 
 ## Future Plans
 

@@ -3,6 +3,7 @@ import path from "path";
 import { notFound } from "next/navigation";
 import { getFrontmatter } from "next-mdx-remote-client/utils";
 import { MDXRemote } from "next-mdx-remote-client/rsc";
+import { components } from "../../components/mdx-layout";
 
 export default async function Page({
   params,
@@ -36,7 +37,7 @@ export default async function Page({
             <p className="text-sm text-neutral-600">{publishedAt}</p>
           )}
         </header>
-        <MDXRemote source={mdxSource} />
+        <MDXRemote source={mdxSource} components={components} />
       </article>
     );
   } catch (e) {

@@ -1,8 +1,9 @@
 export const metadata = {
-  "title": "The Home Node_build_004 - Monitoring (Logging and Metrics)",
-  "publishedAt": "2025-03-24",
-  "summary": "Implementing comprehensive monitoring with Grafana, Prometheus, and Loki for system metrics, logging, and observability across the homelab infrastructure."
-}
+  title: "The Home Node_build_004 - Monitoring (Logging and Metrics)",
+  publishedAt: "2025-03-24",
+  summary:
+    "Implementing comprehensive monitoring with Grafana, Prometheus, and Loki for system metrics, logging, and observability across the homelab infrastructure.",
+};
 
 Tags: [[The Home Node 🏡🖥️🗄️ (DevLog)]]
 
@@ -44,13 +45,19 @@ Logs are text-based events happening within the system. These events typically c
 Logs can be generated from the system processes or from applications. It can literally tell you any information on what's happening on your system, so some are less useful than others. Typically, you only check logs to look for errors when you are debugging. So it would be convenient to have some way of searching through thousands of lines of logs efficiently and possibly aggregate multiple logs sources into one program. Programs like Grafana Loki and Elasticsearch are able to collect logs from various sources and store them into a database for quick access or querying.
 
 **Metrics**
+
 Metrics, on the other hand, are numerical time-series data from your system or application. This data can for monitoring performance (network bandwidth, latency, uptime) and resource usage (CPU, RAM, storage).
 
-![[sample metrics.png|500]]
+<AutoImage
+  src="/blog/images/sample metrics.png"
+  width={500}
+  alt="sample metrics.png"
+/>
 
 Some of the popular applications that collect and store metrics are Prometheus, Grafana Mimir, InfluxDB, and Graphite. These can have varying applications. For example, Prometheus runs on a single node and allows to easily collect and send various metrics to many applications, which is good for homelabs and a small environment. Mimir is based from Prometheus but allows scalable, distributed deployments for cloud applications. This also requires efficient cloud object storage like Amazon Simple Storage Service (S3), Google Cloud Services (GCS), or MinIO. InfluxDB specializes in high-frequency data like IoT metrics.
 
 **Traces**
+
 Traces are lesser known among the three, but these track the flow of requests as they move through the system. This is used for finding bottlenecks in the network architecture or an application system. For example, we want to know how much time a request spends on each step when we access a file from a remote Jellyfin server.
 
 Remote Jellyfin server file access:
@@ -73,7 +80,12 @@ This stack contains applications from the three pillars of observability and Gra
 
 ### Monitoring Architecture
 
-![[buiild 004 monitoring architecture.png]]
+<AutoImage
+  src="/blog/images/buiild 004 monitoring architecture.png"
+  width={600}
+  alt="buiild 004 monitoring architecture.png"
+
+/>
 
 This is my monitoring architecture diagram. I am collecting metrics and logs for my system and docker containers on my **Hpserver** machine. As you can see I am running Loki for logs and Prometheus for Metrics to aggregate telemetry. These essentially serve as a central database for my metrics and logs. Grafana then queries these databases for visualization.
 
@@ -82,7 +94,12 @@ Loki and Prometheus cannot collect the data themselves so they need collectors t
 **Grafana**
 As you might know by now, [Grafana](https://grafana.com/) is a leading tool for visualizing all kinds of telemetry data. It allows to create highly extensible all-in-one visualization dashboard for every application out there. Grafana is able to connect wide range of data sources including time-series databases, logs, relational database, object database, cloud services, and IoT platforms. This allows Grafana to be the only visualization dashboard you need for every use case you can think of.
 
-![[grafana sample.png]]
+<AutoImage
+  src="/blog/images/grafana sample.png"
+  width={600}
+  alt="grafana sample.png"
+
+/>
 
 **Prometheus**
 [Prometheus](https://prometheus.io/docs/introduction/overview/) is the pioneer for modern open-source monitoring, which began at SoundCloud in 2012 to address the insufficiency of existing technologies at the time. This development success of Prometheus led to creation of future modern observability applications like Grafana Loki and others. At its core, Prometheus is a time-series database that enables storage efficiency under the hood. The main strength of Prometheus is its flexible query language, _PromQL_. This allows powerful and flexible metrics querying that allows multi-dimensional queries. Prometheus is primarily uses **pull architecture**, where it pulls data from sources/exporters using HTTP endpoints. Data from Prometheus can be easily visualized through a seamless Grafana integration.
@@ -131,9 +148,19 @@ networks:
 	}
 ```
 
-![[grafana login.png]]
+<AutoImage
+  src="/blog/images/grafana login.png"
+  width={600}
+  alt="grafana login.png"
 
-![[grafana homepage.png]]
+/>
+
+<AutoImage
+  src="/blog/images/grafana homepage.png"
+  width={600}
+  alt="grafana homepage.png"
+
+/>
 
 ### Prometheus
 
@@ -191,20 +218,40 @@ scrape_configs:
 
 After deploying the docker compose, head on to your prometheus webUI and you should see something like this.
 
-![[prometheus webui.png]]
+<AutoImage
+  src="/blog/images/prometheus webui.png"
+  width={600}
+  alt="prometheus webui.png"
+
+/>
 
 Lets try to make a simple query on the number of prometheus requests using the metric name `promhttp_metric_handler_requests_total`. We can see I have 84 requests with metric label `code="200"`.
 
-![[prometheus test query.png]]
+<AutoImage
+  src="/blog/images/prometheus test query.png"
+  width={600}
+  alt="prometheus test query.png"
+
+/>
 
 **Adding Prometheus to Grafana**
 Prometheus collects the metrics by scraping from various sources like Node Exporter for machine metrics and cAdvisor for docker metrics. We will use Grafana to visualize these data so we would need to connect Prometheus to Grafana. To do this, we would need to add Prometheus as a Data Source. On the sidebar go to `Connections>Data Sources`, then click `Add data source` and select `Prometheus`. Here, you can also see various data sources you can add to Grafana, from metrics, logs, tracing, profiling, SQL and others.
 
-![[grafana add data source.png]]
+<AutoImage
+  src="/blog/images/grafana add data source.png"
+  width={600}
+  alt="grafana add data source.png"
+
+/>
 
 Then provide your Prometheus server URL and scroll down to `Save and Test`.
 
-![[prometheus grafana data source.png]]
+<AutoImage
+  src="/blog/images/prometheus grafana data source.png"
+  width={600}
+  alt="prometheus grafana data source.png"
+
+/>
 
 > Note: The following section discusses the use of Prometheus exporters that scrapes metrics from the host machine. These are widely used and easy to configure, but I chose to use Grafana Alloy, which combines all of these exporters/collectors into one program. In my current setup, I was able to integrate node exporter to Alloy but decided to use the standalone cAdvisor exporter due to implementation challenges. It is possible that cAdvisor integration within Alloy becomes easier which would eliminate the need for these standalone exporters.
 
@@ -281,7 +328,13 @@ Note that we again have to mount various root level directories as well as the d
 I am choosing to deploy [Grafana Loki](https://grafana.com/oss/loki/) in [monolithic mode](https://grafana.com/docs/loki/latest/get-started/deployment-modes/#monolithic-mode), which is an all-in-one deployment consisting of multiple pre-configured containers in a single binary. This is good enough for small deployment systems like a homelab. The other scalable modes are preferred for high-traffic systems and systems that require high-availability.
 
 [Image from Loki Documentation]
-![[loki monolithic mode.png|500]]
+
+<AutoImage
+  src="/blog/images/loki monolithic mode.png"
+  width={500}
+  alt="loki monolithic mode.png"
+
+/>
 
 ```yml title:"Loki docker-compose.yml"
 services:
@@ -340,7 +393,12 @@ Loki does not have a WebUI so you have to check the logs if Loki has started suc
 
 We then proceed to add Loki as a Grafana data source, just like with Prometheus earlier. If the test connection succeeds then we are now ready to head on to the next step.
 
-![[loki grafana data source.png]]
+<AutoImage
+  src="/blog/images/loki grafana data source.png"
+  width={600}
+  alt="loki grafana data source.png"
+
+/>
 
 ### Grafana Alloy
 
@@ -431,11 +489,21 @@ Let's breakdown this configuration. The first component is the `local.file_match
 
 This is a simple pipeline that enables to scrape system logs and sends this to Loki. Adding more pipeline simply requires adding these to the Alloy configuration. Restart the container or reload the configuration through `http://<alloy-domain>:12345/-/reload` to update the configuration. If you check your debugging UI at `http://<alloy-domain>:12345`, you can see a graph representation of our configuration. You can also click each component to view its outputs.
 
-![[allow config graph.png]]
+<AutoImage
+  src="/blog/images/allow config graph.png"
+  width={600}
+  alt="allow config graph.png"
+
+/>
 
 If you now check your Grafana instance, under `Explore>Logs` and filter `service_name=system_logs` to see our scraped system logs. You should see all our system logs like this! You can also filter using filename with `filename=/path/to/log`. This shows the ease of using Alloy, simply provide the configuration pipeline for multiple telemetry sources and this automatically gets implemented after a configuration reload. No need to manage multiple exporters and collectors and configure them individually.
 
-![[grafana loki logs.png]]
+<AutoImage
+  src="/blog/images/grafana loki logs.png"
+  width={600}
+  alt="grafana loki logs.png"
+
+/>
 
 **Docker logs**
 For docker logs, we simply use the following configuration. The pipeline is straightforward and it similar to the previous, we just changed the components to obtain the logs with the help of `docker.sock`.
@@ -479,11 +547,21 @@ loki.write "grafana_loki" {
 
 To refresh your configuration without restarting the container, simply go to `https://<alloy-domain>:12345/-/reload`. You should now see more components added to the configuration graph.
 
-![[alloy docker logs graph.png]]
+<AutoImage
+  src="/blog/images/alloy docker logs graph.png"
+  width={600}
+  alt="alloy docker logs graph.png"
+
+/>
 
 And now you can easily view your all docker logs in one place without having to type `docker logs` for each container manually.
 
-![[grafana docker logs.png]]
+<AutoImage
+  src="/blog/images/grafana docker logs.png"
+  width={600}
+  alt="grafana docker logs.png"
+
+/>
 
 **System Metrics**
 Before we scrape system metrics using Alloy, we need to enable the `--web.enable-remote-write-receiver` flag for Prometheus to allow write requests. This is because Prometheus by default uses a pull architecture while Alloy pushes data by writing to Prometheus.
@@ -588,11 +666,21 @@ prometheus.remote_write "grafana_prometheus" {
 
 After reload, you should see this configuration graph. Note that I removed the logs temporarily pipeline to reduce clutter.
 
-![[prometheus system logs graph.png|400]]
+<AutoImage
+  src="/blog/images/prometheus system logs graph.png"
+  width={400}
+  alt="prometheus system logs graph.png"
+
+/>
 
 To check the system metrics data, go to `Explore>Metrics` in your Grafana instance and filter `job=system-metrics`.
 
-![[alloy system metrics.png]]
+<AutoImage
+  src="/blog/images/alloy system metrics.png"
+  width={600}
+  alt="alloy system metrics.png"
+
+/>
 
 **Docker Metrics**
 Grafana Alloy provides a `prometheus.exporter.cadvisor` component, which uses the popular tool [cAdvisor](https://github.com/google/cadvisor) from Google. This enables to collect docker metrics and written to Prometheus. From my testing, I found that getting cAdvisor to work inside Alloy is pretty challenging as there is not a lot of documentation for this. I _did_ managed to get the some important docker metrics to work with cAdvisor in Alloy, but I can't figure out how to emulate the same behavior as the standalone container that exports directly to Prometheus. If you are interested in my configuration here it is, but I've decided to go with cAdvisor standalone with Prometheus for now. Instructions for this is outlined in the Prometheus section.
@@ -657,7 +745,12 @@ prometheus.remote_write "grafana_prometheus" {
 **Putting all configuration together**
 Simply put all alloy configuration in the same `config.alloy` file, the order doesn't really matter since it figures out the pipeline programmatically. Full configuration files can be found on my [GitHub repo]. Go ahead and check your Alloy components graph, you should see something like this.
 
-![[Alloy full graph.png]]
+<AutoImage
+  src="/blog/images/Alloy full graph.png"
+  width={600}
+  alt="Alloy full graph.png"
+
+/>
 
 Alloy is now able to become an all-in-one collector for you logs and metrics, but minus the docker metrics for now. The advantage of this, is that this is very extensible. If you decide to include tracing and profiling or decide to have clusters of Alloys, you can easily do this by just adding to your Alloy configuration. Maybe someday docker metrics would be seamless too! 🚀
 
@@ -665,33 +758,78 @@ Alloy is now able to become an all-in-one collector for you logs and metrics, bu
 
 Customizing your own Grafana dashboard would be very complicated at the start because you would need to be familiar with all the metrics from your various sources and query them using PromQL (Prometheus query language). Thankfully, you can copy other people's pre-made Grafana dashboard [here](https://grafana.com/grafana/dashboards/). This contains many popular dashboards that can serve as your starting point to monitor your data so you can just edit according to your needs later on.
 
-![[grafana premade dashboard.png]]
+<AutoImage
+  src="/blog/images/grafana premade dashboard.png"
+  width={600}
+  alt="grafana premade dashboard.png"
+
+/>
 
 We will be using the very popular **Node Exporter Full**. This simply uses the metrics from node exporter, which we already added earlier. To use this we simply need to take note of the dashboard ID, in this case `ID=1860`.
 
-![[grafana node exporter full.png]]
+<AutoImage
+  src="/blog/images/grafana node exporter full.png"
+  width={600}
+  alt="grafana node exporter full.png"
+
+/>
 
 Then on your Grafana instance, go to `Dashboards`, then on the `New` button there is a dropdown with `import`. Then simply input the ID from earlier, as shown below, then click `Load`.
 
-![[grafana import dashboard.png]]
+<AutoImage
+  src="/blog/images/grafana import dashboard.png"
+  width={600}
+  alt="grafana import dashboard.png"
+
+/>
 
 Make sure to select your Prometheus data source below, then click `Import`.
 
-![[grafana import dashboard 2.png|500]]
+<AutoImage
+  src="/blog/images/grafana import dashboard 2.png"
+  width={500}
+  alt="grafana import dashboard 2.png"
+
+/>
 
 There you go! Now you have all your system metrics in one dashboard. If you scroll below, you'll see many more metrics to view.
 
-![[grafana node exporter full dashboard.png]]
+<AutoImage
+  src="/blog/images/grafana node exporter full dashboard.png"
+  width={600}
+  alt="grafana node exporter full dashboard.png"
+
+/>
 
 For cAdvisor, I found [cAdvisor Docker Insights](https://grafana.com/grafana/dashboards/19908-docker-container-monitoring-with-prometheus-and-cadvisor/) (ID:19908) to be simple enough and [cadvisor dashboard](https://grafana.com/grafana/dashboards/19792-cadvisor-dashboard/) (ID:19792) if you want every metric like Node Exporter Full.
 
-![[grafana cAdvisor Docker Insights.png]]
+<AutoImage
+  src="/blog/images/grafana cAdvisor Docker Insights.png"
+  width={600}
+  alt="grafana cAdvisor Docker Insights.png"
 
-![[grafana cadvisor dashboard.png]]
+/>
 
-![[cAdvisor insights sample dashboard.png]]
+<AutoImage
+  src="/blog/images/grafana cadvisor dashboard.png"
+  width={600}
+  alt="grafana cadvisor dashboard.png"
 
-![[cAdvisor dashboard sample.png]]
+/>
+
+<AutoImage
+  src="/blog/images/cAdvisor insights sample dashboard.png"
+  width={600}
+  alt="cAdvisor insights sample dashboard.png"
+
+/>
+
+<AutoImage
+  src="/blog/images/cAdvisor dashboard sample.png"
+  width={600}
+  alt="cAdvisor dashboard sample.png"
+
+/>
 
 **Grafana Stack Conclusion**
 Now we have every metric and log from our system and Docker containers in a single Dashboard application. But of course, this is just a starting point. As you go through your metrics and logs, you would know which ones are important to you and start to customize your own dashboard. But at the start, you have to at least be familiar of data is available and work from there.
@@ -700,7 +838,12 @@ Now we have every metric and log from our system and Docker containers in a sing
 
 I have decided to deploy another monitoring application that is way simpler than Grafana. [Uptime Kuma](https://github.com/louislam/uptime-kuma) is a simple but elegant dashboard to monitor uptime of your services or any website you want to monitor. This allows me to quickly check the status of my services then I can head to Grafana if I need to investigate deeper. Although Grafana can also be configured to do this, I just like the minimal aesthetic of this application. Uptime Kuma efficiently conveys the status of your applications through design. In contrast, Grafana is good at more heavy and extensive monitoring.
 
-![[Uptime Kuma demo.png]]
+<AutoImage
+  src="/blog/images/Uptime Kuma demo.png"
+  width={600}
+  alt="Uptime Kuma demo.png"
+
+/>
 
 ```yml title:"Uptime Kuma docker-compose.yml"
 services:
@@ -730,11 +873,21 @@ handle @uptimekuma {
 
 You should see the Uptime Kuma sign up page once you spin up the container.
 
-![[uptime kuma signup.png|400]]
+<AutoImage
+  src="/blog/images/uptime kuma signup.png"
+  width={400}
+  alt="uptime kuma signup.png"
+
+/>
 
 Adding monitors is quite straightforward. Most of the time you will only need to add HTTP(s) monitors if your application has a web UI as shown below. But if your service is like a database then you can check on a specific port.
 
-![[uptime kuma example config.png]]
+<AutoImage
+  src="/blog/images/uptime kuma example config.png"
+  width={600}
+  alt="uptime kuma example config.png"
+
+/>
 
 ## Future Plans
 

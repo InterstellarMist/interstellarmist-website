@@ -35,7 +35,7 @@ Ansible uses an **agentless architecture** where agent software doesn't have to 
 
 **Ansible Architecture**
 
-![[build 005 ansible architecture.png|400]]
+<AutoImage src="/blog/images/build 005 ansible architecture.png" width={400} alt="build 005 ansible architecture.png" />
 
 The Ansible architecture contains two types of nodes: Control node and Managed nodes. The control node contains the Ansible program and Ansible configuration. It contains the **Inventory** file, which contains a list of the managed nodes. While, the managed nodes are the machines you want to manage or automate. These are connected using SSH where automation commands are executed to match the desired configuration state.
 
@@ -57,7 +57,7 @@ The Continuous Deployment (CD) extends Continuous Delivery by automatically depl
 
 ### Docker Automation Workflow
 
-![[Build 005 Docker automation workflow.png]]
+<AutoImage src="/blog/images/Build 005 Docker automation workflow.png" width={600} alt="Build 005 Docker automation workflow.png" />
 
 In my case, I take parts of this CI/CD pipeline to my Docker automation workflow. Here, I also take advantage of a centralized repository containing the source of truth for all my docker configuration files. To make changes on my remote machines, I would need to make edits by `git commit` and `git push` this to the remote repository. This then triggers the automation pipeline, detailed below, which updates the relevant containers and sends a status notification to a Discord Webhook. This Discord Webhook sends a message to my Discord server containing information about the updated containers.
 
@@ -326,24 +326,24 @@ networks:
 
 After deploying, you should see a login screen like this where you sign in with your provided credentials.
 
-![[semaphore login.png]]
+<AutoImage src="/blog/images/semaphore login.png" width={600} alt="semaphore login.png" />
 
 You will be asked to create a new project at the beginning. A project is self-contained collection of automation scripts and tools for a certain application. So you can create a project for your home servers then a separate project for your remote machines, but this is more useful in for larger teams where certain people gets to access certain projects. Let's create a `Demo Project` for now.
 
-![[semaphore demo project.png]]
+<AutoImage src="/blog/images/semaphore demo project.png" width={600} alt="semaphore demo project.png" />
 
 In the `Task Templates` section, you can see the demo tasks where it contains the Ansible playbooks, OpenTofu, Bash, Powershell scripts, etc. as Tasks. The play button executes these tasks.
 
-![[Semaphore Task Templates Demo.png]]
+<AutoImage src="/blog/images/Semaphore Task Templates Demo.png" width={600} alt="Semaphore Task Templates Demo.png" />
 
 Go ahead and run the `Ping semaphoreui.com` Ansible playbook, and observer the logs.
 
-![[semaphore ping ansible test.png|600]]
+<AutoImage src="/blog/images/semaphore ping ansible test.png" width={600} alt="semaphore ping ansible test.png" />
 
 **Repositories**
 All the files like Ansible Playbooks, Terraform/OpenTofu configuration files, and scripts are pulled from a repository. All the demo files earlier were pulled from this GitHub repository. Then tasks are created that point to which file it should run from.
 
-![[semphore demo repository.png]]
+<AutoImage src="/blog/images/semphore demo repository.png" width={600} alt="semphore demo repository.png" />
 
 For this demonstration, I will create a GitHub repository containing my update servers playbook earlier. If you have no experience with creating GitHub repositories then check out GitHub's [quickstart guide](https://docs.github.com/en/repositories/creating-and-managing-repositories/quickstart-for-repositories) for creating repositories. There are lots of resources online for this so I'll not include the basics of git repositories. Once you have a link to your repository, you may continue on the section.
 
@@ -356,27 +356,27 @@ homelab-automations/
 
 Assuming you now have your GitHub repository with the update servers playbook, let's create a new project.
 
-![[semaphore new project.png|400]]
+<AutoImage src="/blog/images/semaphore new project.png" width={400} alt="semaphore new project.png" />
 
 Next, we add your repository link to the `Repositories` section. If your repository is private then we also need to add the repository credentials in `Key Store` section. You can either put your SSH key or use password login. I recommend using SSH with GitHub, for more information on this check out this GitHub [guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
-![[semaphore add ssh key.png]]
+<AutoImage src="/blog/images/semaphore add ssh key.png" width={600} alt="semaphore add ssh key.png" />
 
 After this we can add the GitHub repository in the `Repositories` section. Paste your URL and select the access key if applicable. Make sure to use the slash syntax as in `ssh://git@github.com/InterstellarMist/homelab-automations.git`.
 
-![[semaphore add repo.png]]
+<AutoImage src="/blog/images/semaphore add repo.png" width={600} alt="semaphore add repo.png" />
 
 **Creating an Inventory**
 We can import our Ansible inventory `inventory.ini` in the `Invetory` section. Here you specify the user credentials. In my case, I use the same SSH key as earlier to connect to my servers. Also, I created a sudo password in the `Key Store` so I don't have to type it during task execution.
 
-![[semaphore import invetory.png]]
+<AutoImage src="/blog/images/semaphore import invetory.png" width={600} alt="semaphore import invetory.png" />
 
 **Creating a Task**
 Now, we have reached the meat of this setup. Let's create a task that uses the `apt-update.yml` playbook we used earlier. There are three types of Task templates: Tasks for normal playbooks, Build for tasks that create artifacts and Deploy for deploying artifacts to destination servers. Most of the time, we only need to use the Normal Task, the others are more useful in software development.
 
 Simply specify the path to the playbook file, inventory, and repository.
 
-![[semphore create task ansible.png]]
+<AutoImage src="/blog/images/semphore create task ansible.png" width={600} alt="semphore create task ansible.png" />
 
 I was facing some issues with the ssh connection authentication so i had to add the the username `ansible_user` to the inventory file. I also changed to a YAML format because I found it convenient and suppressed the python auto discovery warning that pops up every Ansible run. Make sure to change the inventory in Semaphore from `inventory.ini->inventory.yml`.
 
@@ -416,11 +416,11 @@ Border: off
 Shadow: off
 ```
 
-![[semaphore apt update result 1.png]]
+<AutoImage src="/blog/images/semaphore apt update result 1.png" width={600} alt="semaphore apt update result 1.png" />
 
 --- column-break ---
 
-![[semaphore apt update result 2.png]]
+<AutoImage src="/blog/images/semaphore apt update result 2.png" width={600} alt="semaphore apt update result 2.png" />
 
 --- end-multi-column
 It works!!! Now we can successfully update our server with one click right from the browser. 🚀
@@ -428,7 +428,7 @@ It works!!! Now we can successfully update our server with one click right from 
 **Scheduled Tasks**
 We can also set the update servers Ansible playbook to run on a schedule, say everyday at a certain time. In this way everything is automated, you don't even have to manually click the button to update the servers. 💯💯💯
 
-![[semaphore scheduled tasks.png]]
+<AutoImage src="/blog/images/semaphore scheduled tasks.png" width={600} alt="semaphore scheduled tasks.png" />
 
 **How does Semaphore work?**
 If you are curious at what Semaphore is doing under the hood. Notice that at the start of the logs, it it queues the task for a runner to execute. In our case, the tasks run in the same server but Semaphore can be configured to have multiple different runners on different machines that can run tasks in parallel. This is actually the process used in CI/CD pipelines where dedicated runners can compile code, perform tests, build applications and deploy in parallel. This is useful when you have to build your application for different operating systems like Windows, MacOS, Linux, Android, IOS, etc. If we were to run this in a single server you would need to wait for the current task to finish before starting the next.
@@ -473,10 +473,10 @@ The last piece of the puzzle is getting notified about the results of the automa
 
 Webhooks allows to push data to a web application, usually to trigger some event. Specially, it is an API call on a specific endpoint where you send a PUT HTTP request. To create a Discord Webhook, click on `edit channel` on your chosen channel in your Discord server, then go to `Integrations>Webhooks` and click `New Webhook`. Change the Webhook name and icon as you like and copy the Webhook URL.
 
-![[discord webhook create.png|500]]
+<AutoImage src="/blog/images/discord webhook create.png" width={500} alt="discord webhook create.png" />
 From this Webhook URL, the format is `https://discordapp.com/api/webhooks/webhookid/token`, simply extract the ID and the token and put this in the Ansible task. Once your server performs a scheduled update and something has been updated, then you should see get a notification like this. ✨
 
-![[discord update webhook.png]]
+<AutoImage src="/blog/images/discord update webhook.png" width={600} alt="discord update webhook.png" />
 
 ### Docker Config Automation
 
@@ -518,19 +518,19 @@ GitHub Actions use runners to execute the automation pipeline. GitHub hosted run
 **Adding Self-Hosted Runner to a Repository**
 On your GitHub repository page, go to `Settings`.
 
-![[github main page bar.png|700]]
+<AutoImage src="/blog/images/github main page bar.png" width={700} alt="github main page bar.png" />
 
 Then `Actions>Runners` and click on `New self-hosted runner`.
 
-![[github add self hosted runner.png]]
+<AutoImage src="/blog/images/github add self hosted runner.png" width={600} alt="github add self hosted runner.png" />
 
 Simply follow the relevant instructions provided to install the self-hosted runner.
 
-![[github self hosted runner instructions.png]]
+<AutoImage src="/blog/images/github self hosted runner instructions.png" width={600} alt="github self hosted runner instructions.png" />
 
 After the setup process, you should now see your runner connected to your repository.
 
-![[Added self hosted runner.png]]
+<AutoImage src="/blog/images/Added self hosted runner.png" width={600} alt="Added self hosted runner.png" />
 
 Additionally, we can configure the runner to run as a service so it can automatically start on background at boot. See the commands below to install and start the service.
 
@@ -725,15 +725,15 @@ For the Ansible playbook, we perform a `git pull` that pulls the latest changes 
 
 After pushing a commit to the remote repository, we can see the GitHub runner running the Ansible playbook and thus creating our containers. All this from the convenience of our work machine, where we just push changes to the remote repository.
 
-![[github runner test automated deployment.png]]
+<AutoImage src="/blog/images/github runner test automated deployment.png" width={600} alt="github runner test automated deployment.png" />
 
-![[sample automated deployment.png]]
+<AutoImage src="/blog/images/sample automated deployment.png" width={600} alt="sample automated deployment.png" />
 
 Let's check its actual intended use, updating containers automatically when I change the configuration. Let's say I change some configuration on the `nginx1` stack and decided to change the container name to `nginx1-new`. The typical use case is to update the version numbers of the docker images but this showcase also demonstrates the same behavior, where any change to the docker compose file will lead to container recreation.
 
-![[Automated container update logs.png]]
+<AutoImage src="/blog/images/Automated container update logs.png" width={600} alt="Automated container update logs.png" />
 
-![[automated update containers.png]]
+<AutoImage src="/blog/images/automated update containers.png" width={600} alt="automated update containers.png" />
 
 As we can see from the Ansible logs, it only updates the relevant containers and skips the unchanged ones. From Portainer, we can now see the updated containers names! All of this with just a simple push to the remote repository. No more connecting to the server and manually updating the docker-compose file there and restarting the container for each container you want to update. All container updates are now fully automated! ✨
 
@@ -818,7 +818,7 @@ To send status notifications on Discord, we would need to use a [Discord Webhook
 
 After each container update, you'll receive a discord message like this! ✨
 
-![[discord webhook message.png]]
+<AutoImage src="/blog/images/discord webhook message.png" width={600} alt="discord webhook message.png" />
 
 ### What's Up Docker
 
@@ -851,11 +851,11 @@ handle @whatsupdocker {
 
 WUD configuration is only done through environment variables. In our case, we only need to add environment variables for the Discord Webhook trigger. Now head on to your WUD Web UI, you should see something like this.
 
-![[wud webui.png]]
+<AutoImage src="/blog/images/wud webui.png" width={600} alt="wud webui.png" />
 
 Shortly, you should receive a discord notification if updates are available.
 
-![[wud update notification.png|600]]
+<AutoImage src="/blog/images/wud update notification.png" width={600} alt="wud update notification.png" />
 
 As you can see, the WUD uses digests to determine new version updates for the Grafana container. This is because I was using the `grafana:latest` tag. Since this tag doesn't change you can only check for changes in the digest/hash of the docker image.
 
@@ -874,11 +874,11 @@ services:
 
 Notice I also added a couple of WUD labels because at first WUD would notify you for an update to a weird tag you don't care about that just got a new update, like this one.
 
-![[WUD random tag update.png]]
+<AutoImage src="/blog/images/WUD random tag update.png" width={600} alt="WUD random tag update.png" />
 
 To remedy this, we add the label `wud.tag.include=^v\d+\.\d+\.\d+$$`, which filters to only search for the provided regular expression (regex). For this particular regex it checks the typical semantic versioning (SemVer) naming scheme, `vXYZ.XYZ.XYZ`. So you only get notified for normal releases. More information on WUD labels in the [documentation](https://getwud.github.io/wud/#/configuration/watchers/?id=labels). I also added a link template so it can point me to the release where I can read the changes and decide if i should upgrade.
 
-![[WUD discord labels.png]]
+<AutoImage src="/blog/images/WUD discord labels.png" width={600} alt="WUD discord labels.png" />
 
 > It might be tedious to add labels for every container you have especially if you have a lot but this is only an initial setup, everything will be automated and you'll be notified with updates like the one above.
 
@@ -931,9 +931,9 @@ $ openssl rand -hex 32
 
 Head on to your InfluxDB WebUI to check your installation. Then sign in using your provided admin account, you should see the InfluxDB landing page like this. There we go, deploying InfluxDB was pretty simple! Next, lets deploy the Scrutiny WebUI/API.
 
-![[influxdb login.png]]
+<AutoImage src="/blog/images/influxdb login.png" width={600} alt="influxdb login.png" />
 
-![[influxdb initial dashboard.png]]
+<AutoImage src="/blog/images/influxdb initial dashboard.png" width={600} alt="influxdb initial dashboard.png" />
 
 **Part 2: Scrutiny Web**
 The WebUI contains the frontend web application as well as the backend API. In the docker compose file, we will specify the InfluxDB parameters as environment variables. This contains the API token we created earlier. Make sure the other parameters match the InfluxDB config.
@@ -968,11 +968,11 @@ networks:
 
 After deploying the docker container, check the WebUI and you should see the scrutiny dashboard like this. Of course there is no data yet because we haven't set up collectors. Note that the `SCRUTINY_NOTIFY_URLS` contains your notification provider of choice. Head on to the [notification docs](https://github.com/AnalogJ/scrutiny/blob/master/docs/TROUBLESHOOTING_NOTIFICATIONS.md) for more information.
 
-![[scrutiny initial webui.png]]
+<AutoImage src="/blog/images/scrutiny initial webui.png" width={600} alt="scrutiny initial webui.png" />
 
 On your InfluxDB WebUI, go to sidebar and click on `Load Data>Buckets`. If you can see some scrutiny buckets then we know the scrutiny-web container was able to connect to InfluxDB and use the API token to create tokens. All we have to do is to set up the collector! ✨
 
-![[influxdb scrutiny buckets.png]]
+<AutoImage src="/blog/images/influxdb scrutiny buckets.png" width={600} alt="influxdb scrutiny buckets.png" />
 
 **Part 3: Scrutiny Collector**
 The Scrutiny collector (spoke) can run on multiple host machines to provide SMART metrics to the Scrutiny web container (hub). Just make sure that the endpoint/URL is reachable from the machine your are deploying this on. It is also possible to just install the Scrutiny collector binaries on the host machines instead of Docker containers, check [this](https://github.com/AnalogJ/scrutiny/blob/master/docs/INSTALL_HUB_SPOKE.md) out for more information.
@@ -1014,7 +1014,7 @@ networks:
 
 After deploying the collector, you can check the Scrutiny webUI to check if data is properly collected. I've set the cron job to collect every 5 mins so we get to have some data at the start, but you can simply adjust this according to your needs later. Probably once a day is sufficient.
 
-![[Scrutiny dashboard.png]]
+<AutoImage src="/blog/images/Scrutiny dashboard.png" width={600} alt="Scrutiny dashboard.png" />
 
 In case you are still not getting data, try executing this command in the Scrutiny collector container.
 
@@ -1060,7 +1060,7 @@ $ curl -X POST https://<scrutiny-url>/api/health/notify
 {"success":true,"errors":null,"data":null}
 ```
 
-![[scrutiny discord notif.png|500]]
+<AutoImage src="/blog/images/scrutiny discord notif.png" width={500} alt="scrutiny discord notif.png" />
 
 > Yes, I know my hard drive is dying 😭... I'll get it replaced when I can afford an upgrade.
 

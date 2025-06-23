@@ -1,9 +1,8 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import { highlight } from "sugar-high";
 import React from "react";
+import { AutoImage } from "./auto-image";
 
 function Table({ data }) {
   let headers = data.headers.map((header, index) => (
@@ -87,7 +86,7 @@ function createHeading(level) {
   return Heading;
 }
 
-const components = {
+export const components = {
   h1: createHeading(1),
   h2: createHeading(2),
   h3: createHeading(3),
@@ -95,6 +94,7 @@ const components = {
   h5: createHeading(5),
   h6: createHeading(6),
   Image: RoundedImage,
+  AutoImage,
   a: CustomLink,
   code: Code,
   Table,

@@ -218,7 +218,7 @@ Chunk index:                   33424                96988
 ------------------------------------------------------------------------------
 ```
 
-![[borgbackup encryption.png|500]]
+<AutoImage src="/blog/images/borgbackup encryption.png" width={500} alt="borgbackup encryption.png" />
 
 As you can see, data duplication+compression allows to reduce the size drastically for certain types of files (text files for this example). Also if you check the actual files in the backup, we can see they are encrypted too. So make sure you don't forget that passphrase, as Borg does not have a recovery process if you lose this. You can view all the archives in the repository with `{sh icon} $ borg list`, and then `{sh icon} $ borg info` allows you to repository information like total size.
 
@@ -277,7 +277,7 @@ There you go! A solid file organization and backup system so you can now take co
 [Obsidian](https://obsidian.md/) is a highly extensible free and open-source (FOSS) note taking app based on markdown files. This is an offline first application that ensures you have complete control of your data in a timeless markdown format so there is no vendor lock-down. It has an extensive community creating useful plugins for a wide range of workloads, from project management, journaling, studying, a game content database, book writing, to even writing this exact website article right now. I just can't recommend this application more. Give it a try and see it what you can do with it.
 
 [Image from Obsidian.md]
-![[Obsidian preview.png]]
+<AutoImage src="/blog/images/Obsidian preview.png" width={600} alt="Obsidian preview.png" />
 
 My main focus here is syncing your Obsidian notes across multiple devices. Since Obsidian files are just a bunch of markdown files, you have freedom to sync your notes however you like. This could be a third-party cloud service like Google Drive, or peer-to-peer syncing like [Syncthing](https://syncthing.net/). In my case I've been using the cloud storage provided of my choice, MEGA. MEGA's file automatic file syncing works great even when switching Obsidian instances between two computers, which allows me to continue where I left off in another computer. However, my problem is with using Obsidian on my mobile device since cloud sync is not available on any cloud storage provider; or at least not as good as computer to computer syncing.
 
@@ -346,7 +346,7 @@ Don't forget to add route to the reverse proxy and reload the configuration.
 
 Head on to `https://<your-domain-name>/_utils` to view your CouchDB WebUI. You should be prompted to authenticate using your configured credentials (`COUCHDB_USER`,`COUCHDB_PASSWORD`) and see something like this. Also check the logs for more information.
 
-![[couchdb webui.png|800]]
+<AutoImage src="/blog/images/couchdb webui.png" width={800} alt="couchdb webui.png" />
 
 If you see this then you've successfully deployed the database server! 🎇
 
@@ -374,18 +374,18 @@ This passphrase is never shown again, so please note it in a safe place.
 
 You should get a setup URI beginning with `obsidian://` to be used in client setup. Make sure to save this and keep this safe as this will be used for connecting other clients. On Obsidian, install the **Self-hosted LiveSync** plugin from Settings>Community plugins.
 
-![[obsidian livesync plugin.png]]
+<AutoImage src="/blog/images/obsidian livesync plugin.png" width={600} alt="obsidian livesync plugin.png" />
 
 After enabling the plugin, a welcome pop-up with appear prompting you to set up your device. Simply go through the steps and paste your generated Setup URI and passphrase.
 
-![[obsidian livesync setup uri.png]]
+<AutoImage src="/blog/images/obsidian livesync setup uri.png" width={600} alt="obsidian livesync setup uri.png" />
 
 There you go! Now you have a Notion-like syncing between your devices. Note that on your subsequent devices, you must create new blank vault and install the plugin first. Make sure to pull your notes from the server.
 
 **Obsidian Backups**
 While it is possible to backup the CouchDB database directly, I don't really have a the hardware and the system for automated local backups so I'm opting to backup to the cloud using MEGA. The backup runs on my laptop, where I do most of my writing in Obsidian. I also decided to back my documents module to MEGA just in case I can't access Nextcloud when I'm outside of home.
 
-![[obsidian mega backup.png|400]]
+<AutoImage src="/blog/images/obsidian mega backup.png" width={400} alt="obsidian mega backup.png" />
 
 ### Jellyfin
 
@@ -437,11 +437,11 @@ Border: off
 Shadow: off
 ```
 
-![[jellyfin startup.png]]
+<AutoImage src="/blog/images/jellyfin startup.png" width={600} alt="jellyfin startup.png" />
 
 --- column-break ---
 
-![[jellyfin home screen.png]]
+<AutoImage src="/blog/images/jellyfin home screen.png" width={600} alt="jellyfin home screen.png" />
 
 --- end-multi-column
 After going through the setup process, you'll find your media files ready for watching after a few minutes!

@@ -1,0 +1,5 @@
+ignoredBuiltDependencies:
+  - ws
+
+onlyBuiltDependencies:
+  - '@vercel/speed-insights'

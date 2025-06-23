@@ -1,15 +1,71 @@
-import { BlogPosts } from 'app/components/posts'
+import fs from "fs";
+import path from "path";
+import Link from "next/link";
+import { formatDate } from "../utils";
 
-export const metadata = {
-  title: 'Blog',
-  description: 'Read my blog.',
+// Helper to get metadata from MDX files
+function getMetadata(filePath: string) {
+  const content = fs.readFileSync(filePath, "utf8");
+  // Look for: export const metadata = { ... }
+  const match = content.match(/export const metadata =\s*({[\s\S]*?})/);
+  if (match) {
+    try {
+      // eslint-disable-next-line no-eval
+      const metadata = eval("(" + match[1] + ")");
+      return metadata;
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
-export default function Page() {
+export default function BlogIndex() {
+  const contentDir = path.join(process.cwd(), "content");
+  const files = fs.readdirSync(contentDir);
+  const posts = files
+    .filter((f) => f.endsWith(".mdx"))
+    .map((f) => {
+      const slug = f.replace(/\.mdx$/, "");
+      const metadata = getMetadata(path.join(contentDir, f));
+      return {
+        slug,
+        title: metadata.title || slug,
+        publishedAt: metadata.publishedAt || "",
+      };
+    })
+    .sort((a, b) => {
+      if (new Date(a.publishedAt) > new Date(b.publishedAt)) {
+        return -1;
+      }
+      return 1;
+    });
+
   return (
-    <section>
+    <div>
       <h1 className="font-semibold text-2xl mb-8 tracking-tighter">My Blog</h1>
-      <BlogPosts />
-    </section>
-  )
+      <div>
+        {posts.map((post) => (
+          <Link
+            key={post.slug}
+            className="flex flex-col space-y-1 mb-4"
+            href={`/blog/${post.slug}`}
+          >
+            <div className="w-full flex flex-col md:flex-row md:items-baseline space-x-0 md:space-x-2">
+              <div className="w-[150px] flex-shrink-0">
+                <p className="text-neutral-600 dark:text-neutral-400 tabular-nums text-right w-full">
+                  {post.publishedAt ? formatDate(post.publishedAt) : ""}
+                </p>
+              </div>
+              <div className="flex-1">
+                <p className="text-neutral-900 dark:text-neutral-100 text-left w-full">
+                  {post.title}
+                </p>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }

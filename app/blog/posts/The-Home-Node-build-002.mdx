@@ -1,0 +1,447 @@
+---
+title: "The Home Node_build_002 - Infrastructure Changes + More Applications"
+publishedAt: "2025-03-08"
+summary: "Expanding the homelab infrastructure with additional applications and infrastructure improvements for better functionality and management."
+---
+
+Tags: [[The Home Node 🏡🖥️🗄️ (DevLog)]]
+
+# Build 002: Infrastructure Changes + More Applications
+
+March 8, 2025
+
+## Changelog
+
+- Additional server machine
+- Caddy reverse proxy (replacing Traefik)
+- Docker swarm (overlay network)
+- Nextcloud AIO
+- Homepage
+- Home Assistant
+
+## Architecture
+
+### New Server
+
+- HP Elitedesk 800 G6 Mini PC
+  - Intel i5-10500T (12 cores)
+  - 24 GB DDR4 RAM
+  - 512 GB SSD+512 GB HDD
+  - Ubuntu Server 24.04.2 LTS
+
+![[Hpserver Image.jpg|700]]
+
+I decided to use my mini PC I was using as a lightweight desktop computer as an additional homelab server since my Raspberry Pi could not handle a Nextcloud installation since it only had 2 GB ram and I was already running other services on it. This machine is probably a very good fit for a homelab server since it has a relatively new CPU with 12 logical cores and I installed 24 GB of RAM and 512 SSD, while being relatively power efficient ~25W TDP. It also supports Intel vPRO for virtualization, which makes this perfect to run a hypervisor like Proxmox. But for now, I'm just installing Ubuntu server on bare metal since I just run docker containers and have no use for multiple virtual machines.
+
+### Architecture Changes
+
+I have thought about just moving all my docker services onto the mini PC since it can probably handle all services I put on it. But decided not to because I liked the idea of the RPi becoming some sort of control node, where it runs my core infrastructure services like reverse proxy (Traefik), DNS sinkhole (Pi-hole), VPN (Tailscale), etc. This seemed to be a good fit because RPi is low-power so I can leave it on 24/7 and from experience this device is very reliable even after sudden reboots. This makes the mini PC some sort of a worker node, where I will run my heavier applications like my media server, private cloud storage, and other services I will try out in the future. This also makes it so I don't really need have this running 24/7 if I don't really need it. I only have to ensure the Raspberry Pi is running with minimal downtime.
+
+![[Architecture Overview build 002.png|800]]
+
+This shows my updated architectural diagram. Now, I am running my two servers: Raspberry Pi and Mini PC, where I put the heavier applications on the Mini PC. The RPi is going to be the "control" node as mentioned while the Mini PC is a "worker" node, more on this in a bit. I also changed my reverse proxy to Caddy because I found the configuration easier and lighter, especially for containers on other hosts. The VPN tunnel I use is still Tailscale that connects to my RPi reverse proxy and relying on public DNS (Cloudflare) to point to my RPi Tailscale IP.
+
+**Docker Swarm Overlay Network**
+[Docker Swarm](https://docs.docker.com/engine/swarm/) is a feature that allows multiple standalone docker installations running on separate machines to be controlled from a dedicated "control" node. The main application of swarm is to deploy docker containers across multiple "worker" nodes at scale, this is called _container orchestration_. So this could be a web application serving millions of users, for hundreds of swarm nodes. This has many features such automatic scaling, self-healing (automatically replace down services), load balancing, and overlay network. For my setup, I only use overlay network.
+
+An overlay network allows docker containers from different hosts to be part of the same network as if they were in the same machine. Other hosts could be local or in the cloud, as long as they are in the same docker swarm they can join the same overlay network. Under the hood, this overlay network sits on top (overlays) the actual network, similar to encapsulation in tunneling to make it seem that remote hosts are within the same network.
+
+The reason why I chose to implement an overlay network instead of just routing the exposed port from other devices (i.e. 192.168.0.1:8080) is I want to emulate the security that Traefik reverse proxy provides. Due to Traefik's native docker integration, it allows to the reverse proxy to forwards requests to other containers without exposing ports as long as they are within the same docker network. So an overlay network simply expands the reverse proxy network outside of the local host and spans through multiple hosts.
+
+**Caddy**
+I changed my reverse proxy from Traefik to [Caddy](https://caddyserver.com/) due to simpler configuration. In general, I found Caddy's configuration is much shorter, only needing a single statement per route for a basic reverse proxy setup as shown below.
+
+```txt title:Caddyfile
+example.com {
+	reverse_proxy <container-name>:5000
+}
+```
+
+Additionally, if you deploy Caddy as a docker container and put your services within the same docker network, then you completely eliminate the need to expose ports. The exact same thing from Traefik without all the labels and complicated dynamic configuration files. As an example this is a comparison for the required reverse proxy configuration for Nextcloud-AIO (can't use docker labels, so uses dynamic configuration instead).
+
+```yml title:Traefik.yml
+http:
+  routers:
+    nextcloud:
+      rule: "Host(`<your-nc-domain>`)"
+      entrypoints:
+        - "https"
+      service: nextcloud
+      middlewares:
+        - nextcloud-chain
+      tls:
+        certresolver: "letsencrypt"
+
+  services:
+    nextcloud:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:11000"
+
+  middlewares:
+    nextcloud-secure-headers:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        referrerPolicy: "same-origin"
+
+    https-redirect:
+      redirectscheme:
+        scheme: https
+
+    nextcloud-chain:
+      chain:
+        middlewares:
+          # - ... (e.g. rate limiting middleware)
+          - https-redirect
+          - nextcloud-secure-headers
+```
+
+```txt title:Caddyfile
+https://<your-nc-domain>:443 {
+    reverse_proxy localhost:11000
+}
+```
+
+As we can see, Caddy makes reverse proxy configuration extremely easy and as a bonus they automatically setup HTTPS using self-signed certificates or from Let's Encrypt if your setup supports it. More information on my updated setup below.
+
+## Configurations
+
+### Docker Swarm
+
+We setup Docker Swarm with the RPi server as the swarm manager and the HP server/Mini PC as the swarm worker so they can connect to the same overlay network.
+
+**Create a Docker Swarm Manager**
+First, we initialize the Docker Swarm on the chosen manager node using `{sh icon} $ docker swarm init`.
+
+```sh
+manager@RPiserver:~$ docker swarm init --advertise-addr <MANAGER-IP>
+Swarm initialized: current node (p73va4e1iek3gmqg7o96t0wwd) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-5g1wo1nx1obq8aez6c18rdtt754rdc532wbx4pxd7d0qtwsk0q-eiszni54zefnblrqhr3hr61vs <MANAGER-IP>:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+manager@RPiserver:~$ docker node ls
+ID                            HOSTNAME    STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+p73va4e1iek3gmqg7o96t0wwd *   manager     Ready     Active         Leader           28.0.1
+```
+
+**Add Worker Nodes**
+On the other machine run the command shown with the token to join the Docker swarm. To obtain token again in the future run `{sh icon} $ docker swarm join-token worker`.
+
+```sh
+worker@HPserver:~$ docker swarm join --token SWMTKN-1-5g1wo1nx1obq8aez6c18rdtt754rdc532wbx4pxd7d0qtwsk0q-eiszni54zefnblrqhr3hr61vs 192.168.8.10:2377
+This node joined a swarm as a worker.
+
+manager@RPiserver:~$ docker node ls
+ID                            HOSTNAME    STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+xr574xylgmh64kadgvqw3blk7     worker      Ready     Active                          27.2.0
+p73va4e1iek3gmqg7o96t0wwd *   manager     Ready     Active         Leader           28.0.1
+```
+
+We have successfully created a docker swarm with just a few easy steps. Simply run the same command for each node you want to add to the swarm.
+
+**Create Overlay Network**
+We can now create an overlay network through the standard `{sh icon} $ docker network create` but with a few extra arguments.
+
+```sh
+$ docker network create --driver overlay --attachable caddy-net
+```
+
+The argument `--driver overlay` simply specifies this network to be an overlay network and `attachable` allows standalone containers (non-swarm containers) to connect to the network. Since overlay networks are typically used by Docker Swarm services. Docker services allows container orchestration with automatic scaling and self-healing. However, container orchestration is overkill for my homelab so I'll stick with standalone containers.
+
+Then simply add this overlay network to every `docker-compose.yml` for Caddy (reverse proxy) connect to.
+
+```yml title:"add to your docker-compose.yml"
+networks:
+  caddy-net:
+    external: true
+```
+
+### Caddy
+
+As mentioned earlier, I am migrating to [Caddy](https://caddyserver.com/) due to its simpler configuration while still being able to recreate how Traefik routes reverse proxy traffic through the docker network without exposing ports.
+
+**Install Caddy Cloudflare DNS Module**
+The official Caddy docker container on Docker Hub does not include the Cloudflare DNS module that we used for the DNS-01 ACME protocol to get wildcard certificates from Let's Encrypt. So I am using a pre-built docker that includes this module from https://github.com/IAreKyleW00t/docker-caddy-cloudflare. If you don't, trust this source you can choose to build your own docker container or just install Caddy directly on the server.
+
+```yml title:"Caddy docker-compose.yml"
+services:
+  caddy:
+    image: iarekylew00t/caddy-cloudflare:2.9.1
+    container_name: caddy
+    restart: unless-stopped
+    networks:
+      - caddy-net
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - CF_API_TOKEN
+    cap_add:
+      - NET_ADMIN
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  caddy-net:
+    external: true
+```
+
+The configuration below shows the _Caddyfile_ where the first line with `*.interstellarmist.space, interstellarmist.space` defines the wildcard domain name for the TLS certificate for by Let's Encrypt. Generate your Cloudflare API token, ensuring`Zone.Zone:Read` and `Zone.DNS:Edit` permissions for your specified zone. Then the subsequent entries are simply each route in your reverse proxy, simply specify the domain name and the location of the service, in this case we can simply use to container name and the internal port.
+
+```txt title:"Caddyfile" hl:>
+*.interstellarmist.space, interstellarmist.space {
+  tls {
+    dns cloudflare {env.CF_API_TOKEN}
+  }
+
+  @name host <name.domain.tld>
+  handle @name {
+    reverse_proxy <container-name>:<container-internal-port>
+  }
+
+  @pihole host pihole.interstellarmist.space
+  handle @pihole {
+    reverse_proxy pihole:80
+  }
+
+  @portainer host portainer.interstellarmist.space
+  handle @portainer {
+    reverse_proxy portainer:9000
+  }
+
+  @homepage host homepage.interstellarmist.space
+  handle @homepage {
+    reverse_proxy homepage:3000
+  }
+}
+
+```
+
+As you can see, this setup is way cleaner. No more Traefik labels for each container. 😝
+
+### Updated Pihole and Portainer Configs
+
+Simply change the network to the overlay network `caddy-net` and remove the Traefik labels. The configuration now looks significantly cleaner! 🧼
+
+```yml title:"Portainer docker-compose.yml"
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:lts
+    ports:
+      - "8000:8000"
+    networks:
+      - caddy-net
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+    restart: always
+
+volumes:
+  portainer_data:
+    external: true
+
+networks:
+  caddy-net:
+    external: true
+```
+
+```yml title:"Pihole docker-compose.yml"
+# More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    networks:
+      - caddy-net
+    environment:
+      - TZ=Asia/Manila
+      - FTLCONF_webserver_api_password=<web-password>
+      - FTLCONF_dns_listeningMode=all
+      - FTLCONF_dns_upstreams=208.67.222.222;208.67.220.220
+      - FTLCONF_misc_etc_dnsmasq_d=true
+      - FTLCONF_misc_dnsmasq_lines=address=/domain.tld/<ip-address>
+    volumes:
+      - "<path to etc pihole>:/etc/pihole"
+    cap_add:
+      - SYS_TIME
+      - SYS_NICE
+    restart: unless-stopped
+
+networks:
+  caddy-net:
+    external: true
+```
+
+And just like that, we now migrated our reverse proxy setup to Caddy!
+
+> [!success] Successfully obtained TLS from Let's Encrypt!!! 🎆✨🚀
+
+![[Pihole Caddy TLS Cert.png|600]]
+
+### Nextcloud AIO
+
+[Nextcloud All-in-One (AIO)](https://github.com/nextcloud/all-in-one), as the name suggests, provides a very easy way to deploy Nextcloud and all the necessary services in a single package. This includes the database and some optional features like Nextcloud Office, Talk, Whiteboard, backup solution and many more. Since this is officially maintained, we can ensure these services would integrate well with the base Nextcloud instance, eliminating the manual configuration for for a standalone Nextcloud install. However, this does make the installation more bloaty, so if you prefer a lightweight installation consider other Nextcloud installations.
+
+**Nextcloud AIO mastercontainer setup**
+Out of the box, the master container sets up its own TLS certificates using Let's Encrypt thus would conflict with reverse proxy setups. Moreover, Traefik labels are incompatible due to the nature of mastercontainer setup. For the reverse proxy setup to work, as defined in the [documentation](https://github.com/nextcloud/all-in-one/blob/main/reverse-proxy.md), we need to define some environment variables for the reverse proxy to connect; as well as, binding the reverse proxy overlay network we set up earlier.
+
+```yml title:"Nextcloud docker-compose.yml"
+services:
+  nextcloud-aio-mastercontainer:
+    image: nextcloud/all-in-one:latest
+    init: true
+    restart: always
+    container_name: nextcloud-aio-mastercontainer
+    volumes:
+      - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 8080:8080
+    environment:
+      APACHE_PORT: 11000
+      APACHE_IP_BINDING: 0.0.0.0
+      APACHE_ADDITIONAL_NETWORK: caddy-net
+      # NEXTCLOUD_DATADIR: /mnt/ncdata # Allows to set the host directory for Nextcloud's datadir.
+      SKIP_DOMAIN_VALIDATION: false # This should only be set to true if things are correctly configured.
+
+volumes:
+  nextcloud_aio_mastercontainer:
+    name: nextcloud_aio_mastercontainer
+```
+
+**Reverse proxy modifications**
+We simply add a new reverse proxy route to the `Caddyfile` for Nextcloud. Notice how I can use the hostname `nextcloud-aio-apache` despite being on another machine because of the overlay network magic. ✨
+
+```text title:"Add to Caddyfile"
+@nextcloud host nextcloud.interstellarmist.space
+handle @nextcloud {
+  reverse_proxy nextcloud-aio-apache:11000
+}
+```
+
+You also need to reload the Caddy docker container every time you add changes to the `Caddyfile`. Alternatively you can run `{sh icon} $ caddy reload --config /etc/caddy/Caddyfile` inside the docker container to update the config so I made an alias, `alias caddy_reload='docker exec -it caddy caddy reload --config /etc/caddy/Caddyfile` in `.bashrc`. So I only need to type `caddy_reload` after each configuration change.
+
+Head on to `https://<nextcloud-machine-ip>:8080`(make sure to use the IP instead of your domain!) to access AIO mastercontainer dashboard. Make sure to save your Passphrase too! ⚠️ Go through the setup process and wait for all containers to turn green, then access your Nextcloud dashboard in your provided domain `https://nextcloud.domain.tld` using the provided username and initial password.
+
+![[Nextcloud AIO dashboard.png|810]]
+--- start-multi-column: ID_asdf
+
+```column-settings
+Number of Columns: 2
+Column Size: [49%,49%]
+Border: off
+Shadow: off
+```
+
+![[Nextcloud onboarding.png]]
+
+--- column-break ---
+
+![[Nextcloud Homepage.png]]
+
+--- end-multi-column
+Enjoy your private cloud storage and start de-googling your life! 👏👏👏
+
+### Homepage
+
+[Homepage](https://gethomepage.dev/) is my personal dashboard of choice. There are plenty more out there to choose from like [Homarr](https://homarr.dev/), [Dashy](https://github.com/lissy93/dashy), [Glance](https://github.com/glanceapp/glance), [Heimdall](https://heimdall.site/), [Homer](https://github.com/bastienwirtz/homer), and others I haven't explored yet. The docker compose file is relatively simple. I also won't detail the dashboard configuration as I am still putting it together myself. Head on to the [documentation](https://gethomepage.dev/configs/) if you want to get started.
+
+```yml title:"Homepage docker-compose.yml"
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    networks:
+      - caddy-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config:/app/config # Make sure your local config directory exists'
+
+networks:
+  caddy-net:
+    external: true
+```
+
+![[homepage default.png|700]]
+
+This is my initial custom dashboard.
+
+![[Homepage dashboard v1.png|700]]
+
+### Home Assistant
+
+[Home Assistant](https://www.home-assistant.io/) is powerful home automation platform that supports lots of smart home integrations. This is backed up by a huge community with many resources for different levels of technical knowledge. Home assistant essentially enable you to control your smart home devices through your local network, without having to rely on external servers anymore. It also supports other protocols like Bluetooth, MQTT, Zigbee, Z-Wave, Matter, and others; so you don't really have to worry about support for the devices you have at home.
+
+```yml title:"Home Assistant docker-compose.yml"
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - /PATH_TO_YOUR_CONFIG:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+```
+
+For home assistant features to work like _discovery_, it needs to run in "host" network mode. In host mode, it will directly connect to the host network controller and wouldn't be part of a docker network. This means for your reverse proxy setup, simply use the IP of the device itself.
+
+```txt title:"Add to Caddyfile"
+@homeassistant host home-assistant.interstellarmist.space
+  handle @homeassistant {
+    reverse_proxy 192.168.0.2:8123
+  }
+```
+
+**Configure Home Assistant trusted domains**
+In its default configuration, home assistant does not trust external networks so you have to explicitly allow trusted networks in your `configuration.yml`. This is located in the configuration path you provided in the docker volume mount.
+
+```yml title:configuration.yml
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+	- <reverse-proxy-ip>
+	- 172.16.0.0/12  # docker network
+```
+
+Then simply head on to your domain, and then you now have access to your Home Assistant Dashboard! You can now start freeing your devices from the outside network! 🚀
+
+--- start-multi-column: ID_HA
+
+```column-settings
+Number of Columns: 2
+Column Size: [49%,49%]
+Border: off
+Shadow: off
+```
+
+![[home assistant onboarding.png]]
+
+--- column-break ---
+
+![[home asssistant login.png]]
+
+--- end-multi-column
+![[home assistant initial setup.png|700]]
+
+## Future Plans
+
+For my next plans, I want to delve into logging and automation, so I can monitor my devices. I'll try Grafana since it's the most popular application. I'll eventually want to start learning Ansible so I can automate some tasks and create automated install scripts that would automatically recreate my setups, in case my device fails.

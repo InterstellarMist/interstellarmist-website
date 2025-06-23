@@ -1,0 +1,451 @@
+---
+title: "The Home Node_build_003 - Filesystem organization + Backup system"
+publishedAt: "2025-03-15"
+summary: "Reorganizing the filesystem with a modular approach and implementing deduplicated backups using BorgBackup for efficient data management and version control."
+---
+
+Tags: [[The Home Node 🏡🖥️🗄️ (DevLog)]]
+
+# Build 003: Filesystem organization + Backup system
+
+March 15, 2025
+
+## Changelog
+
+- Reorganize filesystem
+- Implement deduplicated backups
+- Deploy Obsidian self-hosted livesync
+- Deploy Jellyfin media server
+
+## Filesystem Organization
+
+> **Disambiguation:** I will refer to my file organization system as _filesystem_ for short. This should not be confused with actual computer filesystems (e.g., ext4, Btrfs, NTFS).
+
+This is a little tangent from my plans to try out logging and automation. Anyways, when I was figuring out which files I wanted to put on my private cloud--Nextcloud (since i'm not limited to the free 20 GB from cloud storage providers), I realized I needed to restructure my file organization system because it's starting to get a little chaotic. Previously, I had a centralized hierarchical system where files would have its own categories and subcategories, which allows for a very organized filesystem like this.
+
+**Centralized Hierarchical System**
+
+1. Projects
+   1. Main Projects
+   2. Programming Languages
+   3. Media Projects
+2. Personal Documents
+3. Academia
+   1. Resources
+      1. Books
+      2. Papers
+      3. Notes
+   2. College
+4. Resources
+   1. Wallpapers
+   2. Icons
+   3. Fonts
+   4. Photo Editing
+   5. Video Editing
+5. Media
+   1. Entertainment
+      1. Anime
+      2. Kdrama
+      3. Kpop
+      4. Movies
+      5. TV Series
+   2. Captures
+   3. Gaming
+6. Installers 4. Repair 5. Linux 6. Android 7. RaspberyPi 8. Windows
+
+However, this approach would sometimes cause me problems when I want to backup to my 1 TB external hard drive because when I rename, move, or delete files, I would have to make sure I wouldn't have duplicate files. Because simply copying and pasting would result in `file.txt` and `renamed-file.txt`. I find myself copying and pasting meticulously to ensure files are probably backed up without duplication. This takes too long and requires too much effort for a backup, so I would need to figure out with a better approach for my file backups.
+
+Another problem I am about to face is that my 1 TB hard drive is almost full, so this means I must somehow figure out how to split up my centralized filesystem into multiple drives. With these problems, I figured it is time to revamp my file organization scheme to something more robust and future proof, since my files would probably continue to grow and I need a better way to manage and back them up easily.
+
+After some thinking, I decided go with a modular filesystem approach. In this approach, each module can be stored in it own location independent from other modules, so I do not have to ensure all my files are in one place anymore. Each module is designed to be interfaced by a certain app, as shown below.
+
+**Modular Filesystem**
+
+- **Photos** (personal images/videos) = Immich
+- **Media Consumption** (Kpop MVs, Movies, TV shows) = Jellyfin
+- **Documents** (Personal files, school, books/other resources) = Nextcloud
+- **Projects** (active and dormant projects) = Nextcloud+GitHub
+- **Personal Knowledge Management System** (PKMS) = Obsidian Livesync
+- **Archive** = External Drive
+
+Going through each of the modules, my photos will be served using Immich (kinda like a self-hosted google photos), Media content consumption will be served via Jellyfin (like self-hosted Netflix), then Nextcloud to sync my general documents and active project files. A Personal Knowledge Management System (PKMS) is basically a glorified notes app which allows you to manage all kinds of information around your life and is designed to be extensible enough to suit your needs. So this may be notes for classes, project management, journaling, brainstorming, writing, and many more. Lastly, the rest of the files that I probably would not need to access any time soon will be archived in my external drive.
+
+This is probably the most trivial organization since every home folder for operating systems have documents, pictures, and videos folder by default, but I guess I found that keeping everything at one place was easier to manage for me. Now I have outgrown this system and moving on to the modular approach. 🚀
+
+## Backup Strategy
+
+The file organization system only solves half of my problem. The other half is about figuring out how to backup my files seamlessly, and avoid having to manually copy and paste files meticulously. To address this, I came across _Deduplicated Backups_. Chances are, you may not have heard of this term before because this is only commonly used in the enterprise storage space where they have to efficiently backup huge amounts of data (in the order of Petabytes). Deduplicated backup works by only keeping one copy of data across backups. To elaborate on this, consider a system where you do daily backups of journal entries. For traditional backups, you save all files per backup and perform some compression. This allows you to restore to any previous backup and have all your files during that time. But the caveat here is that each backup will contain duplicate copies of the same file, so your 1 MB day 1 journal entry will exist on every backup. So if you have 20 backups, you would have 20 copies of the same file taking up 20 MB.
+
+Deduplication works by only keeping a unique copy of a file, so that files only get incrementally added and modified per backup instead of having a new copy. Under the hood this works by chopping data in chunks and obtains hashes on this, so upon the next backup the system can check the hash of the files to determine if a change has been made or a new file has been created. The actual file structure is still saved separately where it rebuilds this from the data chunks upon restore. Aside from the storage efficiently gains from data deduplication, this also allows for efficient data transfer as you only need to send new data to a remote backup.
+
+In my case, I only really care about being able to backup without having the worry that my renamed files and folders would be duplicated upon backups. But with data deduplication, I get the bonus of having optimized file storage, reduced bandwidth, version control and worry free backups. Also, deduplicated backups can also use compression and encryption on top of this.
+
+### Mounted Backups
+
+One requirement I need for my backup is to able to plug in my hard drive, browse files I want to copy and restore them easily. If data deduplication was like a giant archive compression like `tar.gz`, then you would have have to do a complete restore before you can browser and copy some files from the backup. Thankfully, deduplicated backups have this awesome feature to mount a backup as a normal filesystem. This allows you to browse through your files normally and even stream files without doing a restore. Amazing! ✨
+
+### BorgBackup
+
+Two popular solutions I've found is [BorgBackup](https://www.borgbackup.org/) and [Restic](https://restic.net/). Both are very mature technologies but with different strengths and applications. BorgBackup performs compression by default, and is able to perform quick backups; however, this only supports local backups and remote backups have to connect over SSH. This means cloud backups are not supported. (at the time of writing BorgBackup 2.0 is in pre-release and introduces support for cloud backups) On the other hand, Restic allows backups over cloud storages like S3, Google cloud, etc. Both programs runs in CLI, but BorgBackup has a GUI program called [Vorta](https://vorta.borgbase.com/) for BorgBackup. [Kopia](https://kopia.io/) is another program that has a GUI making it easier for less technical folks.
+
+In my case, I will be using BorgBackup to get my feet wet. I'll try the other programs once I am familiar enough with deduplicated backups.
+
+### A Huge Oversight (Subset Backups)
+
+As I was starting to prepare my files for deduplicated backup on my hard drive, I realized I have a major challenge I need to solve. So in my setup, I have a single 1 TB that contains all my files and the corresponding centralized filesystem. Then on my laptop, I just copy the files I need from this "master vault". So essentially, I also get subsets from this master vault. But my huge oversight is that I realized when I do a Borg backup, if my source (laptop) only has a certain amount of files (subset of external HDD) then the destination (external HDD) would then think i deleted all those missing files from the source. This is because Borg backups assume each snapshot of your files always represents the entirety of the data you want to save, so you cant really have only a subset of your data backed up.
+
+But even if you only backup a subset of your data, deduplicated backups do not delete data unless you prune old files. Okay, then how about let's not prune the older backups? Well, if you don't prune the backups, then your backups would grow so many layers of backups with your initial layer backup with all your files and the subsequent layers with differing subsets of the full initial backup.
+
+To see why this becomes a problem, assume you perform your initial backup with all your files to your master vault. You then choose a couple directories to save to your computer, and one of these files named `todo-list.txt`. Now let's say you did a bunch of modifications to your `todo-list.txt` and decide to perform a backup. Naturally, Borg will perform its deduplication magic where it only stores changes to this text file. Then, a week after this backup, lets say you have finished all your tasks in your `todo-list.txt` and decide to delete this file. When you perform another backup, then this file obviously would not exist in your backup. Now let's say 10 backups later, you suddenly want to retrieve the `todo-list.txt` for some reason. How would you figure out from which layer of your backup to obtain this file from? This becomes a challenging task especially as you add more and more layers because you can prune the initial layer (you'll lose files from your full initial backup).
+
+You might think there must be some way to consolidate the older layers, kinda like flattening the lower layers. However, the backup system would not know what to do if the a file is missing from some of the layers, should it keep it or delete it? If we don't want data loss, then we simply can say don't delete anything. But doing this puts us back to the file duplication problem. Although the backup itself it deduplicated, when you restore the backup you might end up with duplicate data when you decide to move or rename files.
+
+After some amount of thinking, I have arrived at my solution to this problem. I realized at the core of the problem is the ambiguity of when a certain file should be deleted or retained. Because it only knows the source state and the destination state without knowing anything about the file operations that have occurred, so it is too ambiguous unless you record all your file operations, which I don't think is optimal. It turns out the solution was simple--just backup the subsets separately. This works because when you obtain some files from your master vault, you will most likely copy an entire directory for which you expect things you delete to not be backed up. In other words, you'd expect to **mirror** this subset onto the master vault upon backup, while leaving things outside of your subset to be untouched.
+
+So it turns out we only need to **mirror** our files, and deduplicated backups is just an **efficient mirroring with version control**. One can achieve mirroring using [Rsync](https://rsync.samba.org/), a popular CLI tool for syncing two directories that also works for remote directories. This works by incrementally copying the difference in files between the source and destination, but does not work on the data level unlike deduplication. By default, Rsync works like a normal copy and paste that overwrites files even if destination has newer file (use `--update` to ensure it doesn't overwrite newer files). To allow mirroring, we specify the `--delete` argument that tells Rsync to delete files on the destination if it doesn't exist on the source, thus effectively mirroring the source and destination.
+
+So this is now my updated backup strategy:
+
+- Images - Rsync mirror
+- Media - Rsync mirror
+- Documents - deduplicated backup
+- Projects - deduplicated backup
+- PKMS - cloud backup
+- Archive - traditional storage
+
+Each module would have its own separate backup. I use Rsync mirror for the images and media modules because they don't benefit much from data deduplication and I don't really need version control for these because they don't really change. My documents and projects would be deduplicated because these files are very dynamic and would also benefit greatly from an efficient data storage, especially in projects where you use the same module or write the same code for multiple programs.
+
+My PKMS data would be backed up in the cloud because it is a little bit different. This data storage syncing is primarily managed by an app plugin and its data is stored in a database with `json` document format. But the actual files saved on the client machine are just markdown files organized in directories, so I decided to just to do automatic cloud backups to MEGA using the desktop app. I chose MEGA instead of my own Nextcloud server because for some reason Nextcloud only has file syncing and no backups. I just found that the convenience of real-time automatic backups is good enough for now.
+
+Lastly, I'll just place the archive as a normal directory in the master vault as I'll rarely access these files anyway so not much change happens to the files except when I decide to move new files or delete unnecessary ones.
+
+## Configurations
+
+### Rsync Mirror
+
+> For my images and media modules, I will mirror my files from my server to my external hard drive.
+
+To perform an Rsync mirror simply use the `--delete` argument to remove files in the destination that does not exist in source, thereby mirroring the source.
+
+```sh
+$ rsync -av --delete --dry-run /source/ /destination
+```
+
+The argument `-a` means archive mode which preserves timestamps, permissions, symbolic links, etc., `-v` is for verbose. Use the `--dry-run` flag first before making actual changes to avoid accidentally losing files in your destination. Note that `/source` and `/source/` (with trailing slash) are different, `/source` copies the source folder and `/source/` means copy the _contents_ of the source folder so make sure to check before making actual changes. In my case, I'll be mirroring my file modules so it will look like.
+
+```sh
+$ rsync -avh --progress --delete /server/Media/ /external/Media
+```
+
+I also like to add `--progress` to show real-time transfer progress and `-h` to make the units human readable (KB,MB,GB).
+
+### Nextcloud
+
+> I also used Rsync to initially move my files from my external hard drive to my server.
+
+Make sure to put the Nextcloud server in maintenance mode to prevent file activity during file transfer. Also make sure to check the ownership of the files, Nextcloud needs the file ownership to be`www-data:www-data`. Then, simply perform file re-scanning, as shown on the commands below.
+
+```sh
+# Rescan all files
+$ sudo -u www-data php occ files:scan --all
+
+# Rescan for user files
+$ sudo -u www-data php occ files:scan <username>
+
+# Enable/Disable Maintenance mode
+$ sudo -u www-data php occ maintenance:mode --on
+$ sudo -u www-data php occ maintenance:mode --off
+
+# Cleanup file cache
+$ sudo -u www-data php occ files:cleanup
+```
+
+### BorgBackup
+
+> For my documents and projects modules, I will perform deduplicated backups to my external hard drive.
+
+**Prerequisites**
+Make sure to download BorgBackup follow the relevant instructions on the [website](https://borgbackup.readthedocs.io/en/latest/installation.html). Also make sure your storage drive would have sufficient space for your future backups since Borg repositories cannot be split into multiples locations.
+
+**Creating Backups**
+Initialize repository in an empty directory where you will store your backups. Your will be asked to enter a passphrase, which will be use to decrypt your repository. Note that the `repokey` options stores the key within the repository, which makes accessing repository easy at the cost of security, if someone somehow gets access to your repository. You should also save your key elsewhere using the provided `{sh icon} $ borg key export` command in case the repokey get corrupted or missing.
+
+```sh
+$ mkdir Backup
+$ borg init --encryption=repokey Backup/
+Enter new passphrase:
+Enter same passphrase again:
+Do you want your passphrase to be displayed for verification? [yN]: y
+Your passphrase (between double-quotes): "testing"
+Make sure the passphrase displayed above is exactly what you wanted.
+
+IMPORTANT: you will need both KEY AND PASSPHRASE to access this repo!
+
+Key storage location depends on the mode:
+- repokey modes: key is stored in the repository directory.
+- keyfile modes: key is stored in the home directory of this user.
+
+For any mode, you should:
+1. Export the borg key and store the result at a safe place:
+   borg key export           REPOSITORY encrypted-key-backup
+   borg key export --paper   REPOSITORY encrypted-key-backup.txt
+   borg key export --qr-html REPOSITORY encrypted-key-backup.html
+2. Write down the borg key passphrase and store it at safe place.
+```
+
+Create an archive using `{sh icon} $ borg create` where `/Backup` is the location of the repository and `~/src` and `~/Documents` are directories you want to back up. Provide a descriptive archive name for easy access later. You can add the `--stats` argument to see output statistics of the backup operation, and as usual you will be asked for the passphrase for this repository.
+
+```sh
+$ borg create ./Backup::{archive name} ~/src ~/Documents
+$ borg create --stats ./Backup::archive-test2 ~/src ~/Documents
+Enter passphrase for key /home/-/Documents/Backup:
+------------------------------------------------------------------------------
+Repository: /home/-/Documents/Backup
+Archive name: archive-test2
+Archive fingerprint: 4335c10d0f1fd2d93e8d6ce7dca3104d117f9ece51c671dc754b8d530da65dbd
+Time (start): Thu, 2025-03-20 20:08:37
+Time (end):   Thu, 2025-03-20 20:08:44
+Duration: 6.98 seconds
+Number of files: 48288
+Utilization of max. archive size: 0%
+------------------------------------------------------------------------------
+                       Original size      Compressed size    Deduplicated size
+This archive:              609.05 MB            282.08 MB              4.08 kB
+All archives:                1.22 GB            564.16 MB            263.11 MB
+
+                       Unique chunks         Total chunks
+Chunk index:                   33424                96988
+------------------------------------------------------------------------------
+```
+
+![[borgbackup encryption.png|500]]
+
+As you can see, data duplication+compression allows to reduce the size drastically for certain types of files (text files for this example). Also if you check the actual files in the backup, we can see they are encrypted too. So make sure you don't forget that passphrase, as Borg does not have a recovery process if you lose this. You can view all the archives in the repository with `{sh icon} $ borg list`, and then `{sh icon} $ borg info` allows you to repository information like total size.
+
+```sh
+# List archives
+$ borg list ./Backup/
+Enter passphrase for key /home/-/Documents/Backup:
+archive-test                         Thu, 2025-03-20 20:06:38
+archive-test2                        Thu, 2025-03-20 20:08:37
+
+# List contents of an archive
+$ borg list ./Backup::archive-test2
+drwxr-xr-x user   group          0 Fri, 2021-12-31 18:22:30 home/user/Documents
+-rw-r--r-- user   group       7961 Fri, 2021-12-31 18:22:30 home/user/Documents/Important.doc
+
+# List info about the repository
+$ borg info ./Backup
+Repository ID: a808ba7e549cdd1ed42cb53ff0981fb5245ba679b6283128d0290cbe1089b6dc
+Location: /home/-/Documents/Backup
+Encrypted: Yes (repokey)
+Cache: /home/-/.cache/borg/a808ba7e549cdd1ed42cb53ff0981fb5245ba679b6283128d0290cbe1089b6dc
+Security dir: /home/-/.config/borg/security/a808ba7e549cdd1ed42cb53ff0981fb5245ba679b6283128d0290cbe1089b6dc
+------------------------------------------------------------------------------
+                       Original size      Compressed size    Deduplicated size
+All archives:                3.40 GB              1.96 GB            815.91 MB
+
+                       Unique chunks         Total chunks
+Chunk index:                   35652               107538
+```
+
+In my case, I only need to create backups every few months so or when I feel like I need to backup something immediately. So i'll just use `{sh icon} $ borg create` with an archive naming scheme `hostname-YYYY-MM-DD-HHMM`.
+
+```sh
+$ borg create --stats --progress /path/to/repo::"$(hostname)-$(date +%Y-%m-%d)" /path/to/data
+```
+
+For more information head on to the [Borg quickstart docs](https://borgbackup.readthedocs.io/en/stable/quickstart.html)
+
+**Mounting and Restoring Backups**
+Borg allows to mount the backups to the computer filesystem to view and extract files interactively through your file manager. Take note of the file ownership of the backup and the current system, use `root` user if necessary.
+
+```sh
+# mount one archive from a borg repo:
+$ borg mount ./Backup::fedora-2025-03-20 ~/mnt/borg
+
+# unmount archive
+$ borg umount /mnt/borg
+```
+
+There you go! A solid file organization and backup system so you can now take control of your files and not the other way around. Although this still doesn't follow the best practice "3-2-1" backup rule, I think this is a good start. I don't have the means yet to have multiple storage options for multiple copies of backups, and also the means to have a continuous backup system on another machine or remote machine, but these are of course exciting things to implement in the future. 🥂
+
+> For this next part I detail my setup configuration for Obsidian Livesync. Feel free to skip this section if this is not relevant to you.
+
+### Obsidian Self-Hosted Livesync
+
+[Obsidian](https://obsidian.md/) is a highly extensible free and open-source (FOSS) note taking app based on markdown files. This is an offline first application that ensures you have complete control of your data in a timeless markdown format so there is no vendor lock-down. It has an extensive community creating useful plugins for a wide range of workloads, from project management, journaling, studying, a game content database, book writing, to even writing this exact website article right now. I just can't recommend this application more. Give it a try and see it what you can do with it.
+
+[Image from Obsidian.md]
+![[Obsidian preview.png]]
+
+My main focus here is syncing your Obsidian notes across multiple devices. Since Obsidian files are just a bunch of markdown files, you have freedom to sync your notes however you like. This could be a third-party cloud service like Google Drive, or peer-to-peer syncing like [Syncthing](https://syncthing.net/). In my case I've been using the cloud storage provided of my choice, MEGA. MEGA's file automatic file syncing works great even when switching Obsidian instances between two computers, which allows me to continue where I left off in another computer. However, my problem is with using Obsidian on my mobile device since cloud sync is not available on any cloud storage provider; or at least not as good as computer to computer syncing.
+
+Obsidian does provide a first-party syncing service for $4/month, which works great according to user feedback. It is not that expensive and you get to support the development of this great application. Unfortunately, I have yet to have the means to pay a monthly fee for their syncing service. Besides, normal use through computers work flawlessly anyway, it is just the mobile experience that I couldn't enjoy. This led me to try out this amazing plugin called [Self-Hosted LiveSync](https://github.com/vrtmrz/obsidian-livesync) by vorotamoroz, which allows to have this live syncing behavior similar to first-party syncing service but self-hosted. I thought now is a good time to try this out as I try to modularize my filesystem.
+
+The plugin works by using a CouchDB database as the backend storage, wherein each Obsidian instance would synchronize from. CouchDB is a offline-first fast document database storage where files are stored in JSON format. Offline-first means you can expect data to be stored locally and only synchronized when necessary. The plugin also provides conflict resolution in cases where you edit your devices independently while offline. The most intimidating part is self-hosting the CouchDB server but I will outline my setup below.
+
+**CouchDB Server**
+As usual, I will be using a `docker-compose.yml` file to deploy a CouchDB docker container. I will also put this behind my Caddy reverse-proxy, as with my previous applications. Make sure the create the `/data` partition and `.env` file where you put the CouchDB user and password.
+
+```yml title:"CouchDB docker-compose.yml"
+services:
+  couchdb:
+    image: couchdb:3.4.3
+    container_name: couchdb
+    networks:
+      - caddy-net
+    volumes:
+      - ./data:/opt/couchdb/data
+      - ./local.ini:/opt/couchdb/etc/local.ini
+    environment:
+      - COUCHDB_USER
+      - COUCHDB_PASSWORD
+    restart: always
+
+networks:
+  caddy-net:
+    external: true
+```
+
+The `local.ini` sets up configuration for user authentication and CORS (cross-origin resource sharing) on CouchDB to allow Obsidian app access. CORS is a very confusing topic if this is the first time you are hearing this, but essentially this allows the Obsidian application to allow connections to our CouchDB server. As seen in the `origins` variable definition, we allow the domains for Obsidian (desktop app), Capacitor (mobile app) and the localhost to access our database. The rest are just database initialization, authentication and CORS configuration.
+
+```ini title:local.ini
+[couchdb]
+single_node=true
+max_document_size = 50000000
+
+[chttpd]
+require_valid_user = true
+max_http_request_size = 4294967296
+
+[chttpd_auth]
+require_valid_user = true
+authentication_redirect = /_utils/session.html
+
+[httpd]
+WWW-Authenticate = Basic realm="couchdb"
+enable_cors = true
+
+[cors]
+origins = app://obsidian.md,capacitor://localhost,http://localhost
+credentials = true
+headers = accept, authorization, content-type, origin, referer
+methods = GET, PUT, POST, HEAD, DELETE
+max_age = 3600
+```
+
+Don't forget to add route to the reverse proxy and reload the configuration.
+
+```txt title:Caddyfile
+@couchdb host couchdb.interstellarmist.space
+  handle @couchdb {
+    reverse_proxy couchdb:5984
+  }
+```
+
+Head on to `https://<your-domain-name>/_utils` to view your CouchDB WebUI. You should be prompted to authenticate using your configured credentials (`COUCHDB_USER`,`COUCHDB_PASSWORD`) and see something like this. Also check the logs for more information.
+
+![[couchdb webui.png|800]]
+
+If you see this then you've successfully deployed the database server! 🎇
+
+**Obsidian Livesync Client**
+Next, we generate a setup URI that is like a long URL that contains all the configuration needed to setup the Obsidian LiveSync plugin. Once we obtain this, we can simply paste this to configure sync on our devices. Follow the commands below. These simply just exports some environment variables for the setup URI generator to use.
+
+```sh
+$ export hostname=https://<your domain here>
+$ export database=obsidiannotes #Please change as you like
+$ export passphrase=dfsapkdjaskdjasdas #Please change as you like
+$ export username={COUCHDB_USER}
+$ export password={COUCHDB_PASSWORD}
+$ deno run -A https://raw.githubusercontent.com/vrtmrz/obsidian-livesync/main/utils/flyio/generate_setupuri.ts
+```
+
+If you don't have deno installed or do not want to install deno just to generate a setup URI, we can use a temporary deno docker container using this. Simply run the above commands on this interactive shell.
+
+```sh
+$ docker run --rm -it denoland/deno sh
+obsidian://setuplivesync?settings=%5B%22tm2DpsOE74nJAryprZO2M93wF%2Fvg.......4b26ed33230729%22%5D
+
+Your passphrase of Setup-URI is:  patient-haze
+This passphrase is never shown again, so please note it in a safe place.
+```
+
+You should get a setup URI beginning with `obsidian://` to be used in client setup. Make sure to save this and keep this safe as this will be used for connecting other clients. On Obsidian, install the **Self-hosted LiveSync** plugin from Settings>Community plugins.
+
+![[obsidian livesync plugin.png]]
+
+After enabling the plugin, a welcome pop-up with appear prompting you to set up your device. Simply go through the steps and paste your generated Setup URI and passphrase.
+
+![[obsidian livesync setup uri.png]]
+
+There you go! Now you have a Notion-like syncing between your devices. Note that on your subsequent devices, you must create new blank vault and install the plugin first. Make sure to pull your notes from the server.
+
+**Obsidian Backups**
+While it is possible to backup the CouchDB database directly, I don't really have a the hardware and the system for automated local backups so I'm opting to backup to the cloud using MEGA. The backup runs on my laptop, where I do most of my writing in Obsidian. I also decided to back my documents module to MEGA just in case I can't access Nextcloud when I'm outside of home.
+
+![[obsidian mega backup.png|400]]
+
+### Jellyfin
+
+[Jellyfin](https://jellyfin.org/) is a FOSS media server that allows you to server movies, TV shows, music, books and photos; all from your own servers at home. This makes Jellyfin kind of a self-hosted Netflix for every device on your home network, from Windows, Mac, Linux, IOS, Android, and your TV.
+
+As usual, here is the docker-compose file. Make sure to replace the uid and gid, create your local directories, bind the location to your media, and the environment variable to use your domain.
+
+```yml title:"Jellyfin docker-compose.yml"
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    user: 1000:1000 # Replace with your actual uid and gid
+    networks:
+      - caddy-net
+    volumes:
+      - ./config:/config # Create local directory
+      - ./cache:/cache
+      - type: bind # Bind media folder
+        source: /mnt/hdd/media
+        target: /media
+      # Optional - extra fonts to be used during transcoding with subtitle burn-in
+      # - type: bind
+      # source: /path/to/fonts
+      # target: /usr/local/share/fonts/custom
+      # read_only: true
+    restart: "unless-stopped"
+    environment:
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.interstellarmist.space
+
+networks:
+  caddy-net:
+    external: true
+```
+
+```txt title:Caddyfile
+@jellyfin host jellyfin.interstellarmist.space
+handle @jellyfin {
+	reverse_proxy jellyfin:8096
+}
+```
+
+--- start-multi-column: ID_HA
+
+```column-settings
+Number of Columns: 2
+Column Size: [49%,49%]
+Border: off
+Shadow: off
+```
+
+![[jellyfin startup.png]]
+
+--- column-break ---
+
+![[jellyfin home screen.png]]
+
+--- end-multi-column
+After going through the setup process, you'll find your media files ready for watching after a few minutes!
+
+## Future Plans
+
+With solid file organization and backup system, I can finally move on to my original plans of exploring logging and automation. I recently bought a smart switch that measures power draw and added this to Home Assistant so I can see the live power consumption of my machines. However, I would want a better way to view and store this data, along with monitoring my servers' CPU, RAM, network activity, in one place. Hopefully, I'll be able to achieve on the next build.

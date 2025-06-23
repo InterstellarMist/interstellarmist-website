@@ -1,0 +1,312 @@
+---
+title: "The Home Node_build_001 - Core Infrastructure"
+publishedAt: "2025-02-26"
+summary: "Setting up the core infrastructure for my homelab with Raspberry Pi 4B, Docker containers, Traefik reverse proxy, Pi-hole DNS, and Tailscale VPN for remote access."
+---
+
+Tags: [[The Home Node 🏡🖥️🗄️ (DevLog)]]
+
+# Build 001 - Core Infrastructure
+
+Feb 26, 2025
+
+## Architecture
+
+### Main Components
+
+- Raspberry Pi 4B (2 GB) with 128 GB SD card
+
+![[RPi v1.jpg|500]]
+
+The main component of this system is the Raspberry Pi 4B 2 GB (RPi) with this beautiful black heat sink case and tiny fans. I am using the original RPi power adapter and networking connected over WiFi (for now at least, I don't have access to a direct Ethernet connection). Then, I set a DHCP reservation in my router so I don't have to worry about the IP address changing. I am running Ubuntu Server 24.0.2 LTS headless as my OS (installation details a little bit later).
+
+### Homelab Architecture
+
+![[Architecture overview v1.png|800]]
+
+> You can skip this part and go straight to the configuration if you are already familiar with these services.
+
+The architecture diagram shows my current homelab setup. In my local network, all my self-hosted services run on the RPi with [docker containers](https://www.docker.com/resources/what-container/). Using docker containers allows each individual application to be isolated from the rest of the applications in the machine. Each docker container contains the application and all the dependencies it needs to run safe inside the container where it cannot access resources from the outside and outside applications cannot access the container unless configured. This environment isolation is called _containerization_ which allows for better security without having to isolate applications in different virtual machines (VMs).
+
+Deploying docker containers in your machine is as simple as running a docker command like `{sh icon} $ docker run --name nginx -p 8080:80 nginx`. This serves a basic nginx web page on port 8082 on your machine so this can be accessed by going to `http://localhost:8080` (assuming you installed docker on the same machine).
+
+![[nginx test.png]]
+
+If you haven't installed docker yet head on to https://www.docker.com/get-started/ to learn more about docker and how to get started. There is another alternative to the command shown above, you can also write a _docker-compose.yml_ file that allows you to have a written configuration for the application.
+
+```yml title:docker-compose.yml
+services:
+  nginx:
+    image: nginx
+    container_name: nginx
+	  ports:
+	  - "8080:80"
+```
+
+Running `docker compose up` spins up the container and `docker compose down` shuts it down, easy. The main benefit of this is you can easily spin up containers on any machine and expect the application to behave the same way, plus the ability automatically restart after reboots.
+
+**Reverse Proxy**
+When you expose internal docker container ports through `8080:80` (external port:internal port) the machine dedicates the `8080` port exclusively to that application so it cannot be shared by other applications running on the same machine. Typically, you want to use known ports like 80 for HTTP, but since it is likely that other applications also use this port, we then expose a different external port like 8080, 8081, and so on. This is so we can still access the HTTP web entrypoint of our various applications. As the amount of your self-hosted applications grows, you will have to memorize which port accesses each application like port 8081 for Pihole, 8082 for Portainer, 8083 for Traefik, etc. It would be nice if we could simply memorize `app.homelab.local` and don't have to memorize these ports.
+
+A reverse proxy solves this problem by handling routing to your application using various rules. A simple rule is to specify a unique host name for each application like `pihole.homelab.local`, `portainer.homelab.local`, `traefik.homelab.local`, etc. This would then handle the routing to the various ports exposed externally (`pihole.homelab.local` -> port 8081).
+
+![[reverse proxy v1.png|500]]
+
+I am using [Traefik](https://traefik.io/traefik/) as my reverse proxy which has great container integration that allows to route to your applications without having to expose them. This means no more weird port numbers like 8083. This provides as security benefit as all traffic has to go through the reverse proxy before being sent to the applications, as there is no direct access to these applications. Traefik also can handle TLS certificates so that all applications behind the reverse proxy would have an HTTPS connection.
+
+**Custom domain names through DNS**
+As discussed, the reverse proxy would route the incoming requests based on the domain name ex. `pihole.homelab.local`, so that you can access the pihole application. But if you type `http://pihole.homelab.local` right now, you probably wouldn't reach the pihole application and get a DNS resolution error. The reason for this is to access the reverse proxy, you would need to know its IP address, say `192.168.0.10` for example. But your computer doesn't know what IP address belongs to the domain `http://pihole.homelab.local` so it asks a _Domain Name System (DNS) Server_ for its IP address. This means for your computer to access this domain, you would need to map `192.168.0.10` to the domain `http://pihole.homelab.local` in your DNS server, called a _DNS record_. The DNS server acts as a repository that keeps records of names for various websites that you access.
+
+A common application used in the homelab space is [Pi-hole](https://pi-hole.net/), this is technically a network wide ad blocker but this acts as a local DNS server where you can add local DNS records to it. Shown below is a sample DNS record where `pihole.homelab.local` is mapped to the IP `192.168.0.10`, which should be your reverse proxy. Now, when you enter this domain in your browser, it asks the DNS server the IP address and returns `192.168.0.10`. Your computer then sends a request to the reverse proxy with this domain name and should route this to the pihole application dashboard.
+
+![[pihole local dns.png|400]]
+
+It is also possible to setup a public DNS record if you own a domain. I used Cloudflare for the domain I own. Relevant instructions for this can be found [here](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/).
+
+**Remote access using Tailscale VPN**
+Now that you can access your self-hosted services from any machine in your local network through the reverse proxy, wouldn't it be great to be able to access this outside of home? There are few ways to do this: one way, you can do port forwarding on your local network if you have a static IP global address from the ISP. (this one is risky because hackers can attack your network through the internet if not secured properly), another way is to set up a VPN connection to your home network. A VPN or _Virtual Private Network_ allows you to extend your private local network to another trusted network you have access to. This creates an encrypted tunnel from your remote network to your home network. Although technically the data still goes through your the ISP and through the internet but no one can read your data due to encryption.
+
+[Tailscale](https://tailscale.com/) is a mesh VPN that makes it super easy to set up a VPN across your devices. This creates a _virtual network_ where each device you set up gets an `100.x.x.x` IP address so your computer can ping or ssh into your other machines as if you are in the same local network.
+
+[Image from Tailscale.com]
+![[Tailscale sample.png|700]]
+
+Tailscale is completely free and easy to setup, simply just log in using email and start connecting to your devices in minutes. They support most platforms like Windows, Mac, Linux, Android, IOS, and even docker containers.
+
+**Notable Architecture Improvements**
+Before I settled on this homelab architecture, I stumbled upon various issues or quirks I wanted to address. Feel free to skip this section as this is just additional info.
+
+_Tailscale docker sidecar_
+Tailscale can be installed directly on the host machine i.e. Ubuntu server or run as a docker container. Initially, I thought it would be better to run Tailscale as a docker container as this would be easier to manage and deploy. The [official documentation](https://tailscale.com/kb/1282/docker) recommends to run Tailscale as a _sidecar container_, which runs along side a specified container so it's only limited to the network scope of that container. In other words, the Tailscale docker instance cannot access the other ports in the host machine, which provides better security as remote access can be limited to my reverse proxy.
+
+I managed to get Tailscale working as a sidecar container and was able to connect remotely to my reverse proxy. However, I cannot reach any of my services because I did not have access to my local DNS server and this was because it was behind the reverse proxy and was only accessible from my home network. So I would have to figure out how to allow Tailscale to access the port 53 of the DNS server while acting as a sidecar container for Traefik. I was able to do this by using the [subnet router](https://tailscale.com/kb/1019/subnets) feature of Tailscale that allows to advertise devices in the local subnet; useful if you need to access a device using Tailscale but installation is not possible. I didn't want to advertise every device on my network so I only advertised the IP of my host machine, i.e. `192.168.0.1/32`. This did work well but I soon realized, this was exactly the same as installing Tailscale directly on the host machine, so I just scrapped the docker approach and just did a host installation.
+
+As of writing this, I realized I could've just changed the network mode from sidecar to host, so I could've kept using Tailscale docker. But the host mode installation was simple enough and I didn't have to configure anything. Maybe I'll migrate to Tailscale docker someday.
+
+_The self-signed certificate itch_
+
+![[Self-signed cert browser error.png|600]]
+
+As you journey on self-hosting continues, you would have seen this browser warning countless times already. This is because to enable HTTPS connection to your self-hosted applications they would have to create self-signed TLS certificate to enable the website encryption in the browser. This is completely fine in a local homelab environment but there is always an itch to get an actual TLS certificate from a certificate authority (CA). Thankfully, obtaining a TLS certificate can be done free and easily because of the great initiative by [Let's Encrypt](https://letsencrypt.org/). This is an open CA that provides free TLS certificates as long as you own a domain.
+
+After some thought, I've decided will be a good experience to finally get a domain for myself, so I got one from NameCheap. They do sell some domains for cheap if you only need it for a year or two. Very good for just it testing out. Most reverse proxy can handle obtaining and renewing certificates from Let's Encrypt so I just followed the necessary config outlined in the Traefik [docs](https://doc.traefik.io/traefik/https/acme/) and finally I don't have to see the annoying self-signed certificate warning.
+
+_Local DNS to Public DNS_
+Finally now that I own a domain, I can take advantage of a Public DNS to route to my Tailscale reverse proxy IP. Don't worry random people from the internet will not have access to your Tailscale devices because Tailscale uses CGNAT reserved IP block `100.64.0.0 to 100.127.255.255` which are not publicly addressable. This in turn solves my local DNS problem earlier because remote devices can obtain resolve the domain names through a Public DNS (Cloudflare) instead of having to need to connect to my local DNS server. (Maybe I can now revert Tailscale to a sidecar container for added security now...maybe someday 😂)
+
+## Configurations
+
+### Device Setup
+
+#### Installing Headless Ubuntu Server
+
+--- start-multi-column: ID_jmbj
+
+```column-settings
+Number of Columns: 2
+Column Size: [58%,39%]
+Border: off
+Shadow: off
+```
+
+![[RPi Imager GUI.png]]
+
+--- column-break ---
+
+![[RPi Imager Config.png]]
+
+--- end-multi-column
+
+Using the [Official Raspberry Pi Imager](https://www.raspberrypi.com/software/) is the most convenient as this automatically fetches the desired operating system and flashes the SD card. But the main reason to use this is this allows to specify configuration such as WLAN, username, password, locale, and SSH without needing to configure them manually after installation or creating an automated cloud-init configuration. So after the OS image gets flashed, you just put the SD card and wait for the Raspberry Pi to boot without having to plug in a keyboard and monitor. If you also configure DHCP reservation on your router, then you can directly SSH into your server moments after you boot the device.
+
+### Core Infrastructure
+
+These are applications that are crucial to the homelab network so want to make sure these stay up and unaffected when other applications fail. In my current network I have:
+
+- Traefik - reverse proxy
+- Pihole - DNS sinkhole (Adblocker)
+- Tailscale VPN - remote connection
+- Portainer - docker management
+
+#### Tailscale
+
+Tailscale is the easiest to install as no setup is required head on to https://tailscale.com/download download on your machine. For Linux this can be as simple as this.
+
+`{sh icon}$ curl -fsSL https://tailscale.com/install.sh | sh`
+
+Then after the installation, go to the provided link and then sign in to authenticate your server. You'll see your machine status as **connected** in your [admin dashboard](https://login.tailscale.com/admin/machines).
+
+#### Traefik
+
+I'll be using docker-compose files as this allows for easy configuration management. I highlighted some configuration `<replace-me>` you have to replace like mounting files/volumes, and your domain name. Make sure to create `traefik.yml` and `acme.json` before you spin up the container. The `CF_DNS_API_TOKEN` is the Cloudflare API token that is necessary for ACME DNS-01 protocol to get a TLS certificate from Let's Encrypt.
+
+```yml title:"traefik docker-compose.yml" hl:>,CF_DNS_API_TOKEN
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:v3.3
+    networks:
+      - reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_DNS_API_TOKEN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - <path to traefik.yml>:/etc/traefik/traefik.yml:ro
+      - <path to acme.json>:/acme.json
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.traefik.loadbalancer.server.port=8080
+      - traefik.http.routers.traefik.rule=Host(`<traefik.domain.tld>`)
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls=true
+      - traefik.http.routers.traefik.tls.certresolver=myresolver
+      - traefik.http.routers.traefik.tls.domains[0].main=<domain.tld>
+      - traefik.http.routers.traefik.tls.domains[0].sans=<*.domain.tld>
+      - traefik.http.routers.traefik.service=api@internal
+    restart: unless-stopped
+
+networks:
+  reverse-proxy:
+    external: true
+```
+
+```txt title:.env
+CF_DNS_API_TOKEN=<your api token here>
+```
+
+The file `traefik.yml` contains the static configuration for Traefik. Simply replace your email. Also, you might want to change the `caServer` to the staging server while testing to prevent rate limits to the production server.
+
+```yml title:traefik.yml hl:>
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+api:
+  insecure: true
+  dashboard: true
+  debug: true
+log:
+  level: DEBUG
+serversTransports:
+  insecureSkipVerify: true
+entrypoints:
+  web:
+    address: ":80"
+      http:
+        redirections:
+          entryPoint:
+          to: websecure
+  websecure:
+    address: ":443"
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: <email>
+      storage: acme.json
+      caServer: https://acme-v02.api.letsencrypt.org/directory # prod (default)
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory # staging
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+```
+
+After this run, `{sh icon} $ docker compose up -d` to spin up the Traefik container and check the dashboard at `https://traefik.domain.tld`. Check the logs using `{sh icon} $ docker logs traefik` for debugging information. You can turn debugging off in `traefik.yml` by removing the `log: level: DEBUG` lines.
+
+#### Pi-hole
+
+For pihole, this is a similar process. Just edit the highlighted lines just like earlier. For find your timezone [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). I added a dnsmasq entry that adds a wildcard DNS entry `*.domain.tld` to point to your reverse proxy IP. A wildcard DNS entry simply means any subdomain under the `domain.tld` which is signified by the asterisk. If you prefer to set DNS entry somewhere else simply remove these lines. Notice that the labels are the same as the one in Traefik, the allows Traefik to dynamically find routing information about your containers. Simply copy this set of labels to your containers and change the port corresponding to what your container uses.
+
+```yml title:"pihole docker-compose.yml" hl:>
+# More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    networks:
+      - reverse-proxy
+    environment:
+	  - TZ=<America/New_York>
+      - FTLCONF_webserver_api_password=<web-password>
+      - FTLCONF_dns_listeningMode=all
+      - FTLCONF_dns_upstreams=<upstream dns servers>            # separate by semicolon
+      - FTLCONF_misc_etc_dnsmasq_d=true
+      - FTLCONF_misc_dnsmasq_lines=address=/domain.tld/<ip-address>
+    volumes:
+      - "<path to etc pihole>:/etc/pihole"
+    cap_add:
+      - SYS_TIME
+      - SYS_NICE
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.pihole.loadbalancer.server.port=80
+      - traefik.http.routers.pihole.rule=Host(`<pihole.domain.tld>`)
+      - traefik.http.routers.pihole.entrypoints=websecure
+      - traefik.http.routers.pihole.tls=true
+      - traefik.http.routers.pihole.tls.certresolver=myresolver
+      - traefik.http.routers.pihole.tls.domains[0].main=<domain.tld>
+      - traefik.http.routers.pihole.tls.domains[0].sans=<*.domain.tld>
+networks:
+  reverse-proxy:
+    external: true
+```
+
+You should see a login screen like this at `https://<pihole.domain.tld>/admin`, then simply sign in with your provided web password earlier.
+
+![[pihole setup.png|700]]
+
+#### Portainer
+
+The config for Portainer is straightforward, simply change the domain in the Traefik labels like before.
+
+```yml title:"portainer docker-compose.yml"
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:lts
+    ports:
+      - "8000:8000"
+    networks:
+      - reverse-proxy
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+      - traefik.http.routers.portainer.rule=Host(`portainer.domain.tld`)
+      - traefik.http.routers.portainer.tls=true
+      - traefik.http.routers.portainer.tls.certresolver=myresolver
+      - traefik.http.routers.portainer.tls.domains[0].main=domain.tld
+      - traefik.http.routers.portainer.tls.domains[0].sans=*.domain.tld
+      - traefik.http.routers.portainer.entrypoints=websecure
+
+volumes:
+  portainer_data:
+    external: true
+
+networks:
+  reverse-proxy:
+    external: true
+```
+
+After spinning up, go to `https://<portainer.domain.tld>` and go through the initial setup process. Then you should be able to see this login screen.
+
+![[portainer login screen.png|700]]
+
+## Limitations
+
+One major limitation of this setup is that the Raspberry Pi is a low power machine. Although it has decent processing power, my device only has 2 GB of ram which limits the number of applications I can run at the same time. I would need better hardware if I would want to run heavier applications. But for lightweight applications that you want to keep running 24/7, this power efficiency becomes a major advantage.
+
+## Future Plans
+
+I would like to try deploying Nextcloud so I can self-host my own Google Drive. This allows to go from the free 25 GB google provides to as big as a few Terabytes (1000+ GB) as long as I have the storage for it. With the help of Tailscale, I can now access Nextcloud from anywhere in the world. Aside from Nextcloud, I would like to try deploying Home Assistant, a self-hosted home automation, to control my smart lights at home. Let's see where this takes me! 🚀

@@ -7,28 +7,36 @@ import { MDXRemote } from "next-mdx-remote-client/rsc";
 export default async function Page({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<JSX.Element | null> {
+  const { slug } = await params;
   try {
-    const filePath = path.join(process.cwd(), "content", `${params.slug}.mdx`);
+    const filePath = path.join(process.cwd(), "content", `${slug}.mdx`);
     const source = fs.readFileSync(filePath, "utf8");
     const { frontmatter, strippedSource } = getFrontmatter(source);
 
-    if (typeof strippedSource !== "string" || !strippedSource.trim()) {
+    // Type narrowing for frontmatter fields
+    const title =
+      typeof frontmatter?.title === "string" ? frontmatter.title : slug;
+    const publishedAt =
+      typeof frontmatter?.publishedAt === "string"
+        ? frontmatter.publishedAt
+        : undefined;
+    const mdxSource = typeof strippedSource === "string" ? strippedSource : "";
+
+    if (!mdxSource.trim()) {
       return <div>Post content not found or invalid.</div>;
     }
 
     return (
-      <article className="prose mx-auto">
+      <article className="prose mx-auto max-w-2xl">
         <header>
-          <h1>{frontmatter.title || params.slug}</h1>
-          {frontmatter.publishedAt && (
-            <p className="text-sm text-neutral-600">
-              {frontmatter.publishedAt}
-            </p>
+          <h1>{title}</h1>
+          {publishedAt && (
+            <p className="text-sm text-neutral-600">{publishedAt}</p>
           )}
         </header>
-        <MDXRemote source={strippedSource} />
+        <MDXRemote source={mdxSource} />
       </article>
     );
   } catch (e) {

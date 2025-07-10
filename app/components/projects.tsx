@@ -23,7 +23,7 @@ export function ProjectsPortfolio({ projects }: { projects: Project[] }) {
             <img
               src={project.image}
               alt={project.title}
-              className="h-50 object-cover rounded mb-4"
+              className="h-80 rounded mb-4"
             />
           )}
           <h2 className="text-xl font-bold mb-2">{project.title}</h2>

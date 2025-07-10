@@ -13,7 +13,7 @@ export type Project = {
 
 export function ProjectsPortfolio({ projects }: { projects: Project[] }) {
   return (
-    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-8 grid-cols-1">
       {projects.map((project, idx) => (
         <div
           key={idx}
@@ -23,7 +23,7 @@ export function ProjectsPortfolio({ projects }: { projects: Project[] }) {
             <img
               src={project.image}
               alt={project.title}
-              className="w-full h-40 object-cover rounded mb-4"
+              className="h-50 object-cover rounded mb-4"
             />
           )}
           <h2 className="text-xl font-bold mb-2">{project.title}</h2>

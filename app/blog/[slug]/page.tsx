@@ -12,13 +12,15 @@ export default async function Page({
 }): Promise<JSX.Element | null> {
   const { slug } = await params;
   try {
-    const filePath = path.join(process.cwd(), "content", `${slug}.mdx`);
+    // Decode the slug to handle URL-encoded characters (like spaces)
+    const decodedSlug = decodeURIComponent(slug);
+    const filePath = path.join(process.cwd(), "content", `${decodedSlug}.mdx`);
     const source = fs.readFileSync(filePath, "utf8");
     const { frontmatter, strippedSource } = getFrontmatter(source);
 
     // Type narrowing for frontmatter fields
     const title =
-      typeof frontmatter?.title === "string" ? frontmatter.title : slug;
+      typeof frontmatter?.title === "string" ? frontmatter.title : decodedSlug;
     const publishedAt =
       typeof frontmatter?.publishedAt === "string"
         ? frontmatter.publishedAt

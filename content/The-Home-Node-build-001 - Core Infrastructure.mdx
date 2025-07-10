@@ -1,8 +1,9 @@
 export const metadata = {
-  "title": "The Home Node_build_001 - Core Infrastructure",
-  "publishedAt": "2025-02-26",
-  "summary": "Setting up the core infrastructure for my homelab with Raspberry Pi 4B, Docker containers, Traefik reverse proxy, Pi-hole DNS, and Tailscale VPN for remote access."
-}
+  title: "The Home Node_build_001 - Core Infrastructure",
+  publishedAt: "2025-02-26",
+  summary:
+    "Setting up the core infrastructure for my homelab with Raspberry Pi 4B, Docker containers, Traefik reverse proxy, Pi-hole DNS, and Tailscale VPN for remote access.",
+};
 
 Tags: [[The Home Node 🏡🖥️🗄️ (DevLog)]]
 
@@ -22,7 +23,11 @@ The main component of this system is the Raspberry Pi 4B 2 GB (RPi) with this be
 
 ### Homelab Architecture
 
-<AutoImage src="/blog/images/Architecture overview v1.png" width={800} alt="Architecture overview v1.png" />
+<AutoImage
+  src="/blog/images/Architecture overview v1.png"
+  width={800}
+  alt="Architecture overview v1.png"
+/>
 
 > You can skip this part and go straight to the configuration if you are already familiar with these services.
 
@@ -50,7 +55,11 @@ When you expose internal docker container ports through `8080:80` (external port
 
 A reverse proxy solves this problem by handling routing to your application using various rules. A simple rule is to specify a unique host name for each application like `pihole.homelab.local`, `portainer.homelab.local`, `traefik.homelab.local`, etc. This would then handle the routing to the various ports exposed externally (`pihole.homelab.local` -> port 8081).
 
-<AutoImage src="/blog/images/reverse proxy v1.png" width={500} alt="reverse proxy v1.png" />
+<AutoImage
+  src="/blog/images/reverse proxy v1.png"
+  width={500}
+  alt="reverse proxy v1.png"
+/>
 
 I am using [Traefik](https://traefik.io/traefik/) as my reverse proxy which has great container integration that allows to route to your applications without having to expose them. This means no more weird port numbers like 8083. This provides as security benefit as all traffic has to go through the reverse proxy before being sent to the applications, as there is no direct access to these applications. Traefik also can handle TLS certificates so that all applications behind the reverse proxy would have an HTTPS connection.
 
@@ -59,7 +68,11 @@ As discussed, the reverse proxy would route the incoming requests based on the d
 
 A common application used in the homelab space is [Pi-hole](https://pi-hole.net/), this is technically a network wide ad blocker but this acts as a local DNS server where you can add local DNS records to it. Shown below is a sample DNS record where `pihole.homelab.local` is mapped to the IP `192.168.0.10`, which should be your reverse proxy. Now, when you enter this domain in your browser, it asks the DNS server the IP address and returns `192.168.0.10`. Your computer then sends a request to the reverse proxy with this domain name and should route this to the pihole application dashboard.
 
-<AutoImage src="/blog/images/pihole local dns.png" width={400} alt="pihole local dns.png" />
+<AutoImage
+  src="/blog/images/pihole local dns.png"
+  width={400}
+  alt="pihole local dns.png"
+/>
 
 It is also possible to setup a public DNS record if you own a domain. I used Cloudflare for the domain I own. Relevant instructions for this can be found [here](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/).
 
@@ -69,7 +82,12 @@ Now that you can access your self-hosted services from any machine in your local
 [Tailscale](https://tailscale.com/) is a mesh VPN that makes it super easy to set up a VPN across your devices. This creates a _virtual network_ where each device you set up gets an `100.x.x.x` IP address so your computer can ping or ssh into your other machines as if you are in the same local network.
 
 [Image from Tailscale.com]
-<AutoImage src="/blog/images/Tailscale sample.png" width={700} alt="Tailscale sample.png" />
+
+<AutoImage
+  src="/blog/images/Tailscale sample.png"
+  width={700}
+  alt="Tailscale sample.png"
+/>
 
 Tailscale is completely free and easy to setup, simply just log in using email and start connecting to your devices in minutes. They support most platforms like Windows, Mac, Linux, Android, IOS, and even docker containers.
 
@@ -85,7 +103,11 @@ As of writing this, I realized I could've just changed the network mode from sid
 
 _The self-signed certificate itch_
 
-<AutoImage src="/blog/images/Self-signed cert browser error.png" width={600} alt="Self-signed cert browser error.png" />
+<AutoImage
+  src="/blog/images/Self-signed cert browser error.png"
+  width={600}
+  alt="Self-signed cert browser error.png"
+/>
 
 As you journey on self-hosting continues, you would have seen this browser warning countless times already. This is because to enable HTTPS connection to your self-hosted applications they would have to create self-signed TLS certificate to enable the website encryption in the browser. This is completely fine in a local homelab environment but there is always an itch to get an actual TLS certificate from a certificate authority (CA). Thankfully, obtaining a TLS certificate can be done free and easily because of the great initiative by [Let's Encrypt](https://letsencrypt.org/). This is an open CA that provides free TLS certificates as long as you own a domain.
 
@@ -109,11 +131,19 @@ Border: off
 Shadow: off
 ```
 
-<AutoImage src="/blog/images/RPi Imager GUI.png" width={600} alt="RPi Imager GUI.png" />
+<AutoImage
+  src="/blog/images/RPi Imager GUI.png"
+  width={600}
+  alt="RPi Imager GUI.png"
+/>
 
 --- column-break ---
 
-<AutoImage src="/blog/images/RPi Imager Config.png" width={600} alt="RPi Imager Config.png" />
+<AutoImage
+  src="/blog/images/RPi Imager Config.png"
+  width={600}
+  alt="RPi Imager Config.png"
+/>
 
 --- end-multi-column
 
@@ -261,7 +291,11 @@ networks:
 
 You should see a login screen like this at `https://<pihole.domain.tld>/admin`, then simply sign in with your provided web password earlier.
 
-<AutoImage src="/blog/images/pihole setup.png" width={700} alt="pihole setup.png" />
+<AutoImage
+  src="/blog/images/pihole setup.png"
+  width={700}
+  alt="pihole setup.png"
+/>
 
 #### Portainer
 
@@ -301,7 +335,11 @@ networks:
 
 After spinning up, go to `https://<portainer.domain.tld>` and go through the initial setup process. Then you should be able to see this login screen.
 
-<AutoImage src="/blog/images/portainer login screen.png" width={700} alt="portainer login screen.png" />
+<AutoImage
+  src="/blog/images/portainer login screen.png"
+  width={700}
+  alt="portainer login screen.png"
+/>
 
 ## Limitations
 

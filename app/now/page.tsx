@@ -49,7 +49,7 @@ export default function BlogIndex() {
           <Link
             key={post.slug}
             className="flex flex-col space-y-1 mb-4"
-            href={`/blog/${encodeURIComponent(post.slug)}`}
+            href={`/blog/${post.slug}`}
           >
             <div className="w-full flex flex-col md:flex-row md:items-baseline space-x-0 md:space-x-2">
               <div className="w-[150px] flex-shrink-0">

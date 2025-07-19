@@ -39,7 +39,11 @@ const projects: Project[] = [
     title: "The Home Node",
     description:
       "A self-hosted homelab where I experiment with Linux servers, automation, and networking. I’ve set up apps like Nextcloud, a media server, and Home Assistant—all running in Docker containers behind a mesh VPN. With tools like Ansible and Grafana, I’ve built a fully remote-accessible, automated environment to learn and play with infrastructure hands-on.",
-    images: ["/blog/assets/projects/the-home-node-dashboard.png"],
+    images: [
+      "/blog/assets/projects/the-home-node-dashboard.png",
+      "/blog/assets/projects/the-home-node-rpi.jpg",
+      "/blog/assets/projects/the-home-node-hpserver.jpg",
+    ],
     tags: ["Linux", "Docker", "Ansible", "Home Assistant", "Nextcloud", "Networking", "Self-Hosted"],
   },
   {

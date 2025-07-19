@@ -82,7 +82,7 @@ export function ProjectsPortfolio({ projects }: { projects: Project[] }) {
       {projects.map((project, idx) => (
         <div
           key={idx}
-          className="border border-neutral-300 rounded-2xl p-4 shadow-md bg-white dark:bg-zinc-900"
+          className="border-1 border-neutral-300 rounded-2xl p-4 shadow-md bg-white dark:bg-zinc-900"
         >
           <div className="mx-auto">
             <Carousel opts={{ loop: true }} className="mx-12">

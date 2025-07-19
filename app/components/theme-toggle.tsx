@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { LuSun, LuMoon } from 'react-icons/lu';
 
-export function ThemeToggle() {
+export function ThemeToggle({ ...props }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -14,12 +15,14 @@ export function ThemeToggle() {
   };
 
   return (
-    <button
-      onClick={toggleTheme}
-      className="ml-4 px-2 py-1 rounded transition-colors bg-neutral-200 dark:bg-neutral-800"
-      aria-label="Toggle dark mode"
-    >
-      {isDark ? "🌙" : "☀️"}
-    </button>
+    <div {...props}>
+      <button
+        onClick={toggleTheme}
+        className="px-2 py-1 rounded-full transition-colors bg-neutral-200 dark:bg-neutral-800 hover:cursor-pointer hover:bg-neutral-300"
+        aria-label="Toggle dark mode"
+      >
+        {isDark ? <LuMoon /> : <LuSun />}
+      </button>
+    </div>
   );
 }

@@ -1,12 +1,5 @@
-"use client";
 import React from "react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
+import ImageCarousel from "./image-carousel";
 import { FaGithub } from 'react-icons/fa';
 
 export type Project = {
@@ -40,22 +33,6 @@ function renderLinks(links: Project['links']) {
             Live Demo
           </a>
         )}
-        {/* Render any other links */}
-        {Object.entries(links)
-          .filter(([key]) => key !== "github" && key !== "demo")
-          .map(([key, url]) =>
-            url ? (
-              <a
-                key={key}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-zinc-600 hover:underline"
-              >
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </a>
-            ) : null
-          )}
       </>
     ) : null
   );
@@ -84,29 +61,7 @@ export function ProjectsPortfolio({ projects }: { projects: Project[] }) {
           key={idx}
           className="border-1 border-neutral-300 rounded-2xl p-4 shadow-md bg-white dark:bg-zinc-900"
         >
-          <div className="mx-auto">
-            <Carousel opts={{ loop: true }} className="mx-12">
-              <CarouselContent>
-                {project.images && (
-                  project.images.map((image, index) => (
-                    <CarouselItem key={index}>
-                      <img
-                        src={image}
-                        alt={project.title}
-                        className="h-80 mx-auto object-contain rounded-md mb-4"
-                      />
-                    </CarouselItem>
-                  )))
-                }
-              </CarouselContent>
-              {project.images.length > 1 && (
-                <>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </>
-              )}
-            </Carousel>
-          </div>
+          <ImageCarousel images={project.images} />
           <h2 className="text-xl font-bold mb-2">
             {project.title} {project.links && renderLinks(project?.links)}
           </h2>

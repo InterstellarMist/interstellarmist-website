@@ -1,10 +1,13 @@
+import Image from "next/image";
+
 export default function Page() {
   return (
     <section>
       <h1 className="mb-12 text-3xl font-semibold tracking-tighter">
-        Welcome to my website
+        Welcome to my website ✨
       </h1>
 
+      <Image src={"/blog/assets/homepage/me pic.jpg"} alt="Nicholas Chai" width={250} height={250} className="rounded-[40px] mb-8" />
       <h1 className="mb-4 text-2xl font-semibold tracking-tighter">
         Hi, I'm Nicholas Chai
       </h1>
